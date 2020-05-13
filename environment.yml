@@ -13,5 +13,6 @@ dependencies:
     - sqlalchemy
     - nltk
     - pip:
-        - "statsmodels"
-        - "textstat"
+        - statsmodels
+        - textstat
+        - -e .
