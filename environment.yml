@@ -1,0 +1,17 @@
+name: bookend
+dependencies:
+    - python=3.7
+    - numpy
+    - scipy
+    - pandas
+    - matplotlib
+    - nb_conda
+    - jupyter
+    - seaborn
+    - beautifulsoup4
+    - scikit-learn
+    - sqlalchemy
+    - nltk
+    - pip:
+        - "statsmodels"
+        - "textstat"
