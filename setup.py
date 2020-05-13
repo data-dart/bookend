@@ -5,5 +5,5 @@ setup(
     packages=find_packages(),
     version='0.1.0',
     description='Predicting author from text',
-    author='Elaad Applebaum',
+    author='Elaad Applebaum, Kyle Dettman, Diptanil Roy, Nikhil Tilak',
 )
