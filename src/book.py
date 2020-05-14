@@ -106,7 +106,7 @@ class BookText():
         if inplace:
             self._text = cleaned
         else:
-            return BookText(filepath=None, rawtext=cleaned)
+            return BookText(filepath=None, rawtext=cleaned, author=self._author)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[]):
