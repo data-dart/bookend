@@ -31,7 +31,7 @@ class BookText():
         else:
             data = rawtext
         # Using regex to mark the start and end of the book
-        rex_start = r"START OF (THIS|THE) PROJECT GUTENBERG EBOOK (.*) \*\*\*"
+        rex_start = r"START OF (THIS|THE) PROJECT GUTENBERG EBOOK (.*)\s*\*\*\*"
         rex_end = r"(?i)END of (this|the|) Project Gutenberg"
         try:
             start_pos = re.search(rex_start, data).span()[1]
