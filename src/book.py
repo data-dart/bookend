@@ -55,7 +55,7 @@ class BookText():
                 self._author = re.search(
                     r"(?<=Author: )[\w\s]+(?=\n)", meta_data).group().strip()
             except AttributeError:
-                if file_format == 'standard':
+                if file_format == 'standard' and filepath is not None:
                     self._author = filepath.split('/')[-1].split('.')[0].split('_')[0]
                 else:
                     self._author = None
@@ -66,7 +66,7 @@ class BookText():
                 self._title = re.search(
                     r"(?<=Title: )[\w\s]+(?=\n)", meta_data).group().strip()
             except AttributeError:
-                if file_format == 'standard':
+                if file_format == 'standard' and filepath is not None:
                     self._title = filepath.split('/')[-1].split('.')[0].split('_')[1]
                 else:
                     self._title = None
