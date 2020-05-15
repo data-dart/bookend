@@ -131,7 +131,8 @@ class BookText():
         add_stopwords CURRENTLY UNWORKING (default []): list of words to be added to stopword list
         """
 
-        if include_punctuation:
+        # can't remove puncuation for sentences regardless
+        if include_punctuation or 'sent' in on.lower():
             token = self._text.lower()
         else:
             # remove punctuation
