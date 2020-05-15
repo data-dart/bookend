@@ -7,7 +7,7 @@ import random
 class BookText():
     """A class for reading and manipulating texts"""
 
-    def __init__(self, filepath=None, rawtext=None, encoding='utf-8',
+    def __init__(self, filepath=None, rawtext=None, encoding='utf-8', file_format='standard',
                  clean=False, author=None, title=None, meta=None):
         """Constructor for BookText
 
@@ -17,6 +17,7 @@ class BookText():
             filepath (None): filepath to a text file to read
             rawtext (None): a raw text string
             encoding ("utf-8"): the encoding to use
+            file_format ("standard"): format of the filepath string, used to assign author and title information if it cannot be found in the meta data
             clean (False): whether to clean the text on initializing
             author (None): if not specified, inferred from text
             title (None): if not specified, inferred from text
@@ -54,7 +55,10 @@ class BookText():
                 self._author = re.search(
                     r"(?<=Author: )[\w\s]+(?=\n)", meta_data).group().strip()
             except AttributeError:
-                self._author = None
+                if file_format == 'standard':
+                    self._author = filepath.split('/')[-1].split('.')[0].split('_')[0]
+                else:
+                    self._author = None
         else:
             self._author = author
         if title is None:
@@ -62,7 +66,10 @@ class BookText():
                 self._title = re.search(
                     r"(?<=Title: )[\w\s]+(?=\n)", meta_data).group().strip()
             except AttributeError:
-                self._title = None
+                if file_format == 'standard':
+                    self._title = filepath.split('/')[-1].split('.')[0].split('_')[1]
+                else:
+                    self._title = None
         else:
             self._title = None
 
