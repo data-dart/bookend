@@ -2,6 +2,7 @@ from nltk.corpus import stopwords
 from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
 import re
 import random
+import string
 
 
 class BookText():
@@ -126,7 +127,7 @@ class BookText():
             return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self.meta)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
-                 add_stopwords=[]):
+                 add_stopwords=[], include_punctuation=False):
         """Tokenize words or sentences in the text
 
         Produces lists of either words or sentences contained in the text
@@ -139,10 +140,18 @@ class BookText():
         stopword_lang (default 'english'): language of stopword corpus to use
         add_stopwords CURRENTLY UNWORKING (default []): list of words to be added to stopword list
         """
+
+        # can't remove puncuation for sentences regardless
+        if include_punctuation or 'sent' in on.lower():
+            token = self._text
+        else:
+            # remove punctuation
+            token = self._text.lower().translate(
+                str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
-            token = word_tokenize(self._text.lower())
+            token = word_tokenize(token.lower())
         elif 'sent' in on.lower():
-            token = sent_tokenize(self._text)
+            token = sent_tokenize(token)
         else:
             raise KeyError(
                 "Arugument 'on' must refer to either word or sentence")
