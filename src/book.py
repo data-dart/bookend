@@ -146,7 +146,7 @@ class BookText():
             token = self._text
         else:
             # remove punctuation
-            token = self._text.lower().translate(
+            token = self._text.translate(
                 str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
             token = word_tokenize(token.lower())
