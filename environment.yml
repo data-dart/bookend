@@ -16,3 +16,4 @@ dependencies:
         - statsmodels
         - textstat
         - -e .
+        - pytest

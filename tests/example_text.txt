@@ -1,0 +1,18 @@
+metadata
+
+Author: Testy McTestface
+
+*** START OF THIS PROJECT GUTENBERG EBOOK EMMA ***
+
+CONTENTS
+
+Chap 1
+
+Chap 2
+
+Chap 3
+
+
+This is a quick example. It is just
+a few sentences, but "has' interesting
+punctuation? That is true: Hello.
