@@ -169,6 +169,10 @@ class BookText():
                     words_nostop = [
                         word for word in words if not word in stop_words]
                     token[i] = (" ").join(words_nostop)
+        if 'sent' in on.lower() and not include_punctuation:
+            for i in range(len(token)):
+                token[i] = token[i].translate(
+                    str.maketrans('', '', string.punctuation + '”“’'))
         return token
 
     def snippet(self, length, on, non_cont=False, inplace=False):
