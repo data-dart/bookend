@@ -14,6 +14,10 @@ def bt():
 	bookobj = BookText('example_text.txt')
 	return bookobj
 
+def test_toc(bt):
+	assert bt.toc.startswith('Chap 1')
+	assert bt.toc.endswith('Chap 3')
+
 def test_scrape_meta(bt):
 	assert bt.author == 'Testy McTestface'
 
