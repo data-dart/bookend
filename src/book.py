@@ -142,7 +142,8 @@ class BookText():
         add_stopwords CURRENTLY UNWORKING (default []): list of words to be added to stopword list
         """
 
-        # can't remove puncuation for sentences regardless
+        # can't remove puncuation prior to splitting sentences
+        # because we need the periods, question marks, and the like
         if include_punctuation or 'sent' in on.lower():
             token = self._text
         else:
@@ -170,6 +171,9 @@ class BookText():
                     words_nostop = [
                         word for word in words if not word.lower() in stop_words]
                     token[i] = (" ").join(words_nostop)
+        # if tokenizing by sentence and removing punctuation
+        # now that we've split sentences (i.e. on periods)
+        # we can iterate through tokens and remove punctuation
         if 'sent' in on.lower() and not include_punctuation:
             for i in range(len(token)):
                 token[i] = token[i].translate(
