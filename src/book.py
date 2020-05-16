@@ -131,7 +131,7 @@ class BookText():
 
         Produces lists of either words or sentences contained in the text
 
-        **NB** converts words to lower case to facilitate comparisons
+        **NB** word tokenize converts words to lower case to facilitate comparisons
 
         on ('word' or 'sentence'):
             whether the lists will be tokenized according to words or sentences
@@ -142,7 +142,7 @@ class BookText():
         if 'word' in on.lower():
             token = word_tokenize(self._text.lower())
         elif 'sent' in on.lower():
-            token = sent_tokenize(self._text.lower())
+            token = sent_tokenize(self._text)
         else:
             raise KeyError(
                 "Arugument 'on' must refer to either word or sentence")
@@ -158,7 +158,7 @@ class BookText():
                     sent = token[i]
                     words = sent.split()
                     words_nostop = [
-                        word for word in words if not word in stop_words]
+                        word for word in words if not word.lower() in stop_words]
                     token[i] = (" ").join(words_nostop)
         return token
 
