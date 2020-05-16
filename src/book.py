@@ -98,8 +98,9 @@ class BookText():
         """
         cleaned = self._text
 
-        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|-|â€'
+        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
         cleaned = re.sub(garbage, '', cleaned)
+        cleaned = cleaned.replace('-', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
