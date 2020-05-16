@@ -98,8 +98,9 @@ class BookText():
         """
         cleaned = self._text
 
-        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|-|â€'
+        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
         cleaned = re.sub(garbage, '', cleaned)
+        cleaned = cleaned.replace('-', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
@@ -132,7 +133,7 @@ class BookText():
 
         Produces lists of either words or sentences contained in the text
 
-        **NB** converts words to lower case to facilitate comparisons
+        **NB** word tokenize converts words to lower case to facilitate comparisons
 
         on ('word' or 'sentence'):
             whether the lists will be tokenized according to words or sentences
@@ -143,13 +144,13 @@ class BookText():
 
         # can't remove puncuation for sentences regardless
         if include_punctuation or 'sent' in on.lower():
-            token = self._text.lower()
+            token = self._text
         else:
             # remove punctuation
-            token = self._text.lower().translate(
+            token = self._text.translate(
                 str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
-            token = word_tokenize(token)
+            token = word_tokenize(token.lower())
         elif 'sent' in on.lower():
             token = sent_tokenize(token)
         else:
@@ -167,7 +168,7 @@ class BookText():
                     sent = token[i]
                     words = sent.split()
                     words_nostop = [
-                        word for word in words if not word in stop_words]
+                        word for word in words if not word.lower() in stop_words]
                     token[i] = (" ").join(words_nostop)
         if 'sent' in on.lower() and not include_punctuation:
             for i in range(len(token)):
