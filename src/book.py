@@ -131,6 +131,7 @@ class BookText():
         garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
         cleaned = re.sub(garbage, '', cleaned)
         cleaned = cleaned.replace('-', ' ')
+	cleaned = re.sub(r'\n+', ' ', cleaned)
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
