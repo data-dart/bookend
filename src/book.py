@@ -71,7 +71,37 @@ class BookText():
                 else:
                     self._title = None
         else:
-            self._title = None
+            self._title = title #FIXME IN MASTER
+            
+    def __add__(self, other): 
+        '''
+        Overloaded the addition operator for BookText. Returns text of both the booktext objects, and carries over
+        the author and title info. If authors or titles are not same, the 1st book is preferred over the second.
+        '''
+        author1 = self._author
+        author2 = other._author
+        title1 = self._title
+        title2 = other._title
+        if (author1 is None and author2 is not None):
+            author = author2
+        elif (author1 is not None and author2 is None):
+            author = author1
+        elif (author1 != author2):
+            print ("The authors are not the same. Assigning the author of the 1st Book to the resultant bookobject")
+            author = author1
+        else:
+            author = author1
+            
+        if (title1 is None and title2 is not None):
+            title = title2
+        elif (title1 is not None and title2 is None):
+            title = title1
+        elif (title1 != title2):
+            print ("The authors are not the same. Assigning the title of the 1st Book to the resultant bookobject")
+            title = title1
+        else:
+            title = title1
+        return BookText(rawtext=self._text+other._text, author=author, title=title, meta=None) 
 
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
@@ -89,6 +119,9 @@ class BookText():
 
         garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|-|â€'
         cleaned = re.sub(garbage, '', cleaned)
+        
+        extra_charac = '\n'
+        cleaned = re.sub(r'\n+', ' ', cleaned)
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
@@ -103,7 +136,12 @@ class BookText():
                     WNLemma.lemmatize(token, pos='n'), pos='v'), pos='a')
                     for token in tokens]
             cleaned = (" ").join(lemmatized)
-
+        else:
+            # Added this bit just to clean up unnecessary spaces in the text.
+            # The Clean Function thus returns a text with no extra spaces.
+            tokens = word_tokenize(cleaned)
+            cleaned = (" ").join(tokens)
+            
         if deromanize:
             tokens = word_tokenize(cleaned)
             regex_roman = '^(?=[MDCLXVI])M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$'
@@ -113,7 +151,7 @@ class BookText():
         if inplace:
             self._text = cleaned
         else:
-            return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self.meta)
+            return BookText(filepath=None, rawtext=cleaned, author=self._author, title=self._title, meta=self._meta)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[]):
@@ -185,6 +223,48 @@ class BookText():
         else:
             return BookText(rawtext=snippet, author=self.author,
                             title=self.title, meta=self.meta)
+        
+    def random_snippet(self, on, n_groups=1, n_on=1, with_replacement=False, rem_stopwords=False, random_seed=0):
+    
+        """
+        link = BookText Object
+        n_groups = Number of groups of snippets from a booktext object. Will return an array with 
+                   n_groups number of book_text objects
+        n_on = Number of characters/words/sentences in each snippet that you want.
+        with_replacement = (Default = False). This function will return snippets with no repeated sentences.
+                            If you want repetition of sentences, set it to TRUE
+        rem_stopwords = By Default, the function will not remove stopwords during tokenize. Set it to TRUE to remove
+                    stopwords.
+        random_seed = Set a value to get the same snippets everytime. Do not set 0, as it corresponds to using
+                      system_time as seed.  
+        """
+        return_array = []
+
+        if 'char' in on.lower():
+            tokens = self._text
+        elif 'word' in on.lower():
+            tokens = self.tokenize('word', rem_stopwords)
+        elif 'sent' in on.lower():
+            tokens = self.tokenize('sent', rem_stopwords)
+        else:
+            raise KeyError(
+                "Argument 'on' must refer to character, word, or sentence")
+        assert n_groups*n_on < len(tokens)
+
+        if (random_seed != 0):
+            random.seed(random_seed)
+
+        for iteration in range(n_groups):
+            random_sample_of_indices = random.sample(range(0, len(tokens)), n_on)
+            snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in random_sample_of_indices]), author = self.author, title = self.title, meta = self.meta)
+            return_array.append(snippet)
+            if with_replacement == False:
+                for index in sorted(random_sample_of_indices, reverse=True):
+                    del tokens[index]
+            if (random_seed != 0):
+                    random.seed(random_seed + iteration + 1)
+
+        return return_array
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
