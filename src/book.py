@@ -120,8 +120,9 @@ class BookText():
         garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|-|â€'
         cleaned = re.sub(garbage, '', cleaned)
         
-        extra_charac = '\n'
         cleaned = re.sub(r'\n+', ' ', cleaned)
+        
+        cleaned = cleaned.replace('-', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
