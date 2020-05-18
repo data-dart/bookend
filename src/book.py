@@ -2,13 +2,14 @@ from nltk.corpus import stopwords
 from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
 import re
 import random
+import string
 
 
 class BookText():
     """A class for reading and manipulating texts"""
 
     def __init__(self, filepath=None, rawtext=None, encoding='utf-8', file_format='standard',
-                 clean=False, author=None, title=None, meta=None):
+                 clean=False, author=None, title=None, meta=None, infer_toc=True):
         """Constructor for BookText
 
         parameters:
@@ -21,6 +22,7 @@ class BookText():
             clean (False): whether to clean the text on initializing
             author (None): if not specified, inferred from text
             title (None): if not specified, inferred from text
+            infer_toc (True): will attempt to infer the TOC from the text
         """
         if not (filepath or rawtext):
             raise ValueError('Must specify one of filepath or rawtext')
@@ -43,6 +45,15 @@ class BookText():
             end_pos = None
         meta_data = data[:start_pos]
         text_of_book = data[start_pos:end_pos]
+
+        if infer_toc:
+            toc_start, toc_end = self.find_toc(text_of_book)
+            meta_data = meta_data + text_of_book[:toc_start]
+            self._toc = text_of_book[toc_start:toc_end]
+            text_of_book = text_of_book[toc_end:]
+        else:
+            self._toc = None
+
 
         self._text = text_of_book
         if clean:
@@ -117,7 +128,7 @@ class BookText():
         """
         cleaned = self._text
 
-        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|-|â€'
+        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
         cleaned = re.sub(garbage, '', cleaned)
         
         cleaned = re.sub(r'\n+', ' ', cleaned)
@@ -155,12 +166,12 @@ class BookText():
             return BookText(filepath=None, rawtext=cleaned, author=self._author, title=self._title, meta=self._meta)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
-                 add_stopwords=[]):
+                 add_stopwords=[], include_punctuation=False):
         """Tokenize words or sentences in the text
 
         Produces lists of either words or sentences contained in the text
 
-        **NB** converts words to lower case to facilitate comparisons
+        **NB** word tokenize converts words to lower case to facilitate comparisons
 
         on ('word' or 'sentence'):
             whether the lists will be tokenized according to words or sentences
@@ -168,10 +179,18 @@ class BookText():
         stopword_lang (default 'english'): language of stopword corpus to use
         add_stopwords CURRENTLY UNWORKING (default []): list of words to be added to stopword list
         """
+
+        # can't remove puncuation for sentences regardless
+        if include_punctuation or 'sent' in on.lower():
+            token = self._text
+        else:
+            # remove punctuation
+            token = self._text.translate(
+                str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
-            token = word_tokenize(self._text.lower())
+            token = word_tokenize(token.lower())
         elif 'sent' in on.lower():
-            token = sent_tokenize(self._text.lower())
+            token = sent_tokenize(token)
         else:
             raise KeyError(
                 "Arugument 'on' must refer to either word or sentence")
@@ -187,7 +206,7 @@ class BookText():
                     sent = token[i]
                     words = sent.split()
                     words_nostop = [
-                        word for word in words if not word in stop_words]
+                        word for word in words if not word.lower() in stop_words]
                     token[i] = (" ").join(words_nostop)
         return token
 
@@ -310,3 +329,20 @@ class BookText():
     @property
     def title(self):
         return self._title
+
+    @staticmethod
+    def find_toc(text, toc_reg='\n\s+(table of |.?)contents.?\s+\n'):
+        """Returns start and end indices of TOC"""
+        try:
+            ind_start = re.search(toc_reg, text.lower()).span()[1]
+        except AttributeError:
+            return (0, 0)
+        # TOC styles are too varied to do this exactly, so we make a guess
+        ind_stop = ind_start + text[ind_start:].find('\n\n\n')
+        toc_text = text[ind_start:ind_stop]
+        main_text = text[ind_stop:]
+        return ind_start, ind_stop
+
+    @property
+    def toc(self):
+        return self._toc
