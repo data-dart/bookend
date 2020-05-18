@@ -225,13 +225,15 @@ class BookText():
             return BookText(rawtext=snippet, author=self.author,
                             title=self.title, meta=self.meta)
         
-    def random_snippet(self, on, n_groups=1, n_on=1, with_replacement=False, rem_stopwords=False, random_seed=0):
+    def random_snippet(self, on, n_groups=1, n_on=1, start_point=1, randomized = True, with_replacement=False, rem_stopwords=False, random_seed=0):
     
         """
         link = BookText Object
         n_groups = Number of groups of snippets from a booktext object. Will return an array with 
                    n_groups number of book_text objects
         n_on = Number of characters/words/sentences in each snippet that you want.
+        start_point = The point in the text from where you want to get the characters/words/sentences. Starts from 1.
+        randomized = If you want the snippets picked randomly, set this to true. Else, snippets will be picked in order.
         with_replacement = (Default = False). This function will return snippets with no repeated sentences.
                             If you want repetition of sentences, set it to TRUE
         rem_stopwords = By Default, the function will not remove stopwords during tokenize. Set it to TRUE to remove
@@ -250,21 +252,25 @@ class BookText():
         else:
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
-        assert n_groups*n_on < len(tokens)
+        assert n_groups*n_on < len(tokens) - start_point + 1
 
         if (random_seed != 0):
             random.seed(random_seed)
 
         for iteration in range(n_groups):
-            random_sample_of_indices = random.sample(range(0, len(tokens)), n_on)
-            snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in random_sample_of_indices]), author = self.author, title = self.title, meta = self.meta)
+            if not randomized:
+                snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in range(start_point - 1 +(iteration)*n_on,start_point - 1 +(iteration + 1)*n_on)]), author = self.author, title = self.title, meta = self.meta)
+            
+            else:
+                random_sample_of_indices = sorted(random.sample(range(0, len(tokens) - start_point + 1), n_on), reverse=False)
+                snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in random_sample_of_indices]), author = self.author, title = self.title, meta = self.meta)
+                if with_replacement == False:
+                    for index in sorted(random_sample_of_indices, reverse=True):
+                        del tokens[index]
+                if (random_seed != 0):
+                        random.seed(random_seed + iteration + 1)
+                        
             return_array.append(snippet)
-            if with_replacement == False:
-                for index in sorted(random_sample_of_indices, reverse=True):
-                    del tokens[index]
-            if (random_seed != 0):
-                    random.seed(random_seed + iteration + 1)
-
         return return_array
 
     def word_count(self, unique=False, **kwargs):
