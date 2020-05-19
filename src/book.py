@@ -133,6 +133,7 @@ class BookText():
         cleaned = re.sub(garbage, '', cleaned)
         cleaned = cleaned.replace('-', ' ')
         cleaned = re.sub(r'\n+', ' ', cleaned)
+        cleaned = cleaned.replace('-', ' ').replace('—', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
