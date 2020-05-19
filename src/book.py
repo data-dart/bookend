@@ -3,6 +3,7 @@ from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
 import re
 import random
 import string
+from warnings import warn
 
 
 class BookText():
@@ -98,7 +99,7 @@ class BookText():
         elif (author1 is not None and author2 is None):
             author = author1
         elif (author1 != author2):
-            print ("The authors are not the same. Assigning the author of the 1st Book to the resultant bookobject")
+            warn("The authors are not the same. Assigning the author of the 1st Book to the resultant bookobject")
             author = author1
         else:
             author = author1
@@ -108,11 +109,11 @@ class BookText():
         elif (title1 is not None and title2 is None):
             title = title1
         elif (title1 != title2):
-            print ("The authors are not the same. Assigning the title of the 1st Book to the resultant bookobject")
+            warn("The titles are not the same. Assigning the title of the 1st Book to the resultant bookobject")
             title = title1
         else:
             title = title1
-        return BookText(rawtext=self._text+other._text, author=author, title=title, meta=None) 
+        return BookText(rawtext=self._text+' '+other._text, author=author, title=title, meta=None) 
 
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
@@ -149,8 +150,7 @@ class BookText():
         else:
             # Added this bit just to clean up unnecessary spaces in the text.
             # The Clean Function thus returns a text with no extra spaces.
-            tokens = word_tokenize(cleaned)
-            cleaned = (" ").join(tokens)
+            cleaned = re.sub('\s+', ' ', cleaned)
             
         if deromanize:
             tokens = word_tokenize(cleaned)
@@ -161,7 +161,7 @@ class BookText():
         if inplace:
             self._text = cleaned
         else:
-            return BookText(filepath=None, rawtext=cleaned, author=self._author, title=self._title, meta=self._meta)
+            return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self._meta)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[], include_punctuation=False):
@@ -186,7 +186,7 @@ class BookText():
             token = self._text.translate(
                 str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
-            token = word_tokenize(token.lower())
+            token = word_tokenize(token) #Changed here from token.lower() to token
         elif 'sent' in on.lower():
             token = sent_tokenize(token)
         else:
@@ -208,58 +208,23 @@ class BookText():
                     token[i] = (" ").join(words_nostop)
         return token
 
-    def snippet(self, length, on, non_cont=False, inplace=False):
+    def snippet(self, length, on, groups=1, non_cont=False, randomized=False, rem_stopwords=False, ret_as_arr=False, with_replace=True, random_seed=0, inplace=False):
         """
-        """
-        # TODO add ability for random seed
-        if 'char' in on.lower():
-            assert length < len(self._text)
-        elif 'word' in on.lower():
-            tokens = word_tokenize(self._text)
-            assert length < len(tokens)
-        elif 'sent' in on.lower():
-            tokens = sent_tokenize(self._text)
-        else:
-            raise KeyError(
-                "Arugument 'on' must refer to character, word, or sentence")
-
-        if non_cont:
-            # TODO add functionality for non-continuous random sampling
-            pass
-        else:
-            if 'char' in on.lower():
-                start = random.randint(0, len(self._text) - length)
-                snippet = self._text[start:start + length]
-            elif 'word' in on.lower():
-                start = random.randint(0, len(tokens) - length)
-                snippet = (" ").join(tokens[start:start + length])
-            elif 'sent' in on.lower():
-                start = random.randint(0, len(tokens) - length)
-                snippet = (" ").join(tokens[start:start + length])
-        if inplace:
-            self._text = snippet
-        else:
-            return BookText(rawtext=snippet, author=self.author,
-                            title=self.title, meta=self.meta)
+        Returns snippets of char/words/sent of various length depending on input.
+        # of snippets = groups (Default=1). # of char/word/sent of snippets = length.
+        non-cont: (Default = False): If True, returns random char/word/sent from starting point
+        randomized: (Default = False): If True, chooses a random point to start making snippets
+        rem_stopwords: Same as in Tokenize
+        ret_as_array: (Default = False): Returns one BookText object by appending all groups of snippets, else returns
+                                         an array of BookText objects
+        with_replace: (Default = True): For non-contiguous case, makes sure there is no repetition. If turned off, different
+                                        snippets in a group might have repeated char/word/sent.
+        random_seed: When positive, generates the same snippets everytime
         
-    def random_snippet(self, on, n_groups=1, n_on=1, start_point=1, randomized = True, with_replacement=False, rem_stopwords=False, random_seed=0):
-    
         """
-        link = BookText Object
-        n_groups = Number of groups of snippets from a booktext object. Will return an array with 
-                   n_groups number of book_text objects
-        n_on = Number of characters/words/sentences in each snippet that you want.
-        start_point = The point in the text from where you want to get the characters/words/sentences. Starts from 1.
-        randomized = If you want the snippets picked randomly, set this to true. Else, snippets will be picked in order.
-        with_replacement = (Default = False). This function will return snippets with no repeated sentences.
-                            If you want repetition of sentences, set it to TRUE
-        rem_stopwords = By Default, the function will not remove stopwords during tokenize. Set it to TRUE to remove
-                    stopwords.
-        random_seed = Set a value to get the same snippets everytime. Do not set 0, as it corresponds to using
-                      system_time as seed.  
-        """
-        return_array = []
-
+        if (random_seed != 0):
+            random.seed(random_seed)
+            
         if 'char' in on.lower():
             tokens = self._text
         elif 'word' in on.lower():
@@ -269,26 +234,53 @@ class BookText():
         else:
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
-        assert n_groups*n_on < len(tokens) - start_point + 1
-
-        if (random_seed != 0):
-            random.seed(random_seed)
-
-        for iteration in range(n_groups):
-            if not randomized:
-                snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in range(start_point - 1 +(iteration)*n_on,start_point - 1 +(iteration + 1)*n_on)]), author = self.author, title = self.title, meta = self.meta)
             
-            else:
-                random_sample_of_indices = sorted(random.sample(range(0, len(tokens) - start_point + 1), n_on), reverse=False)
-                snippet = BookText(rawtext=''.join([BookText(rawtext = tokens[num]).text + str(' ') for num in random_sample_of_indices]), author = self.author, title = self.title, meta = self.meta)
-                if with_replacement == False:
+        assert groups*length <= len(tokens)
+        return_array = []
+
+        if randomized:
+            start = random.randint(0, len(tokens) - groups*length)
+            tokens = tokens[start:]
+        else:
+            start = 0
+        
+        if non_cont == False:
+            for gr in range(groups):
+                snippet = BookText(rawtext=''.join((" ").join(tokens[length*gr:length*(gr+1)])), 
+                               author = self.author, title = self.title, meta = self.meta)
+                return_array.append(snippet)
+        else:
+            for gr in range(groups):
+                random_sample_of_indices = sorted(random.sample(range(0, len(tokens)), length), reverse=False)
+                dummy_string = str()
+                for num in random_sample_of_indices:
+                    dummy_string += tokens[num] + str(' ')
+                dummy_string.rstrip()    
+                snippet = BookText(rawtext= dummy_string, author = self.author, 
+                                   title = self.title, meta = self.meta)
+                return_array.append(snippet)
+                
+                if with_replace:
                     for index in sorted(random_sample_of_indices, reverse=True):
                         del tokens[index]
                 if (random_seed != 0):
-                        random.seed(random_seed + iteration + 1)
-                        
-            return_array.append(snippet)
-        return return_array
+                    random.seed(random_seed + gr + 1)
+        
+        dummy_string = str()
+        for book in return_array:
+            dummy_string += book._text + str(' ')
+            
+        dummy_string.strip()
+
+        snip = BookText(rawtext = dummy_string, author = self.author, title = self.title, meta = self.meta)
+        
+        if inplace:
+            self._text = snip._text
+        else:
+            if ret_as_arr == False:
+                return snip
+            else:
+                return return_array
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
