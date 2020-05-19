@@ -3,6 +3,7 @@ from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
 import re
 import random
 import string
+import numpy as np
 from warnings import warn
 
 
@@ -289,7 +290,7 @@ class BookText():
             if ret_as_arr == False:
                 return snip
             else:
-                return return_array
+                return np.array(return_array)
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
