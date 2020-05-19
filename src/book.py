@@ -265,7 +265,7 @@ class BookText():
                 return_array.append(snippet)
                 
                 for index in sorted(range(start, start+length), reverse=True):
-                    if (gr != groups - 1):
+                    if (len(tokens)-length > 0):
                         del tokens[index] 
                 if (random_seed is not None):
                     random.seed(random_seed + gr + 1)
