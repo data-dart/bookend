@@ -83,7 +83,7 @@ class BookText():
                 else:
                     self._title = None
         else:
-            self._title = title #FIXME IN MASTER
+            self._title = title
             
     def __add__(self, other): 
         '''
@@ -162,7 +162,7 @@ class BookText():
         if inplace:
             self._text = cleaned
         else:
-            return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self._meta)
+            return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self.meta)
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[], include_punctuation=False):
@@ -209,7 +209,7 @@ class BookText():
                     token[i] = (" ").join(words_nostop)
         return token
 
-    def snippet(self, length, on, groups=1, non_cont=False, randomized=False, rem_stopwords=False, ret_as_arr=False, with_replace=True, random_seed=0, inplace=False):
+    def snippet(self, length, on, groups=1, non_cont=False, randomized=True, rem_stopwords=False, ret_as_arr=False, random_seed=None, inplace=False):
         """
         Returns snippets of char/words/sent of various length depending on input.
         # of snippets = groups (Default=1). # of char/word/sent of snippets = length.
@@ -218,12 +218,10 @@ class BookText():
         rem_stopwords: Same as in Tokenize
         ret_as_array: (Default = False): Returns one BookText object by appending all groups of snippets, else returns
                                          an array of BookText objects
-        with_replace: (Default = True): For non-contiguous case, makes sure there is no repetition. If turned off, different
-                                        snippets in a group might have repeated char/word/sent.
         random_seed: When positive, generates the same snippets everytime
         
         """
-        if (random_seed != 0):
+        if (random_seed is not None):
             random.seed(random_seed)
             
         if 'char' in on.lower():
@@ -242,6 +240,7 @@ class BookText():
         if randomized:
             start = random.randint(0, len(tokens) - groups*length)
             tokens = tokens[start:]
+            start = 0
         else:
             start = 0
         
@@ -251,21 +250,22 @@ class BookText():
                                author = self.author, title = self.title, meta = self.meta)
                 return_array.append(snippet)
         else:
-            for gr in range(groups):
-                random_sample_of_indices = sorted(random.sample(range(0, len(tokens)), length), reverse=False)
-                dummy_string = str()
-                for num in random_sample_of_indices:
-                    dummy_string += tokens[num] + str(' ')
-                dummy_string.rstrip()    
-                snippet = BookText(rawtext= dummy_string, author = self.author, 
-                                   title = self.title, meta = self.meta)
+            for gr in range(groups): 
+                snippet = BookText(rawtext=''.join((" ").join(tokens[start:start+length])), 
+                               author = self.author, title = self.title, meta = self.meta)
+                snippet._text.rstrip()    
                 return_array.append(snippet)
                 
-                if with_replace:
-                    for index in sorted(random_sample_of_indices, reverse=True):
-                        del tokens[index]
-                if (random_seed != 0):
+                for index in sorted(range(start, start+length), reverse=True):
+                    if (gr != groups - 1):
+                        del tokens[index] 
+                if (random_seed is not None):
                     random.seed(random_seed + gr + 1)
+            
+                if (len(tokens)-length > 0):
+                    start = random.randint(1, len(tokens)-length)
+                else:
+                    start = 0
         
         dummy_string = str()
         for book in return_array:
@@ -273,7 +273,7 @@ class BookText():
             
         dummy_string.strip()
 
-        snip = BookText(rawtext = dummy_string, author = self.author, title = self.title, meta = self.meta)
+        snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
         
         if inplace:
             self._text = snip._text
