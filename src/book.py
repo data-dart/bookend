@@ -13,10 +13,8 @@ class BookText():
     def __init__(self, filepath=None, rawtext=None, encoding='utf-8', file_format='standard',
                  clean=False, author=None, title=None, meta=None, infer_toc=True):
         """Constructor for BookText
-
         parameters:
             **NB** one of filepath or rawtext must be specified
-
             filepath (None): filepath to a text file to read
             rawtext (None): a raw text string
             encoding ("utf-8"): the encoding to use
@@ -118,10 +116,8 @@ class BookText():
 
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
-
         Returns a new BookText object with cleaned text derived 
         from the full text
-
         lemmatize (default True): cleaned data will be lemmatized
         deromanize (default False): roman numerals will be removed from cleaned data
         lemma_pos (default 'v'): position variable for lemmatizer
@@ -168,11 +164,8 @@ class BookText():
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[], include_punctuation=False):
         """Tokenize words or sentences in the text
-
         Produces lists of either words or sentences contained in the text
-
         **NB** word tokenize converts words to lower case to facilitate comparisons
-
         on ('word' or 'sentence'):
             whether the lists will be tokenized according to words or sentences
         rem_stopwords (default True): if stopwords should be removed from tokens
@@ -230,22 +223,28 @@ class BookText():
         random_seed: When positive, generates the same snippets everytime
         
         """
+        
+        #Random seed set if provided by user.
         if (random_seed is not None):
             random.seed(random_seed)
-            
+        
+        #Punctuations are now retained in a snippet.
         if 'char' in on.lower():
             tokens = self._text
         elif 'word' in on.lower():
-            tokens = self.tokenize('word', rem_stopwords)
+            tokens = self.tokenize('word', rem_stopwords, include_punctuation=True)
         elif 'sent' in on.lower():
-            tokens = self.tokenize('sent', rem_stopwords)
+            tokens = self.tokenize('sent', rem_stopwords, include_punctuation=True)
         else:
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
-            
+        
+        #Groups*Length needs to be lower than the tokenized text length
         assert groups*length <= len(tokens)
         return_array = []
-
+        
+        #Random number generated for starting point. Everything before starting point
+        #is removed from array
         if randomized:
             start = random.randint(0, len(tokens) - groups*length)
             tokens = tokens[start:]
@@ -253,11 +252,17 @@ class BookText():
         else:
             start = 0
         
+        #For contiguous text, returns snippets next to each other.
         if non_cont == False:
             for gr in range(groups):
                 snippet = BookText(rawtext=''.join((" ").join(tokens[length*gr:length*(gr+1)])), 
                                author = self.author, title = self.title, meta = self.meta)
                 return_array.append(snippet)
+                
+        #For non-contiguous text, gets the first snippet based on starting point,
+        #then deletes the elements of the snippet, 
+        #and gets a snippet again.
+        
         else:
             for gr in range(groups): 
                 snippet = BookText(rawtext=''.join((" ").join(tokens[start:start+length])), 
@@ -275,7 +280,8 @@ class BookText():
                     start = random.randint(1, len(tokens)-length)
                 else:
                     start = 0
-        
+                    
+        #For default behaviour, all snippets are merged and output is a single booktext object.
         dummy_string = str()
         for book in return_array:
             dummy_string += book._text + str(' ')
@@ -294,7 +300,6 @@ class BookText():
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
-
         If unique, returns only the number of unique words
         See tokenize for possible keyword arguments
         """
@@ -305,7 +310,6 @@ class BookText():
 
     def sentence_count(self, **kwargs):
         """Returns a count of the sentences in the BookText object
-
         See tokenize for possible keyword arguments
         """
         token = self.tokenize(on='sent', **kwargs)
