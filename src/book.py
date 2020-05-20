@@ -219,92 +219,99 @@ class BookText():
                     str.maketrans('', '', string.punctuation + '”“’'))
         return token
 
-    def snippet(self, length, on, groups=1, non_cont=False, randomized=True, rem_stopwords=False, ret_as_arr=False, random_seed=None, inplace=False):
+    def snippet(self, length, on, groups=1, non_cont=False, with_replacement=True,
+                rem_stopwords=False, randomized=True, ret_as_arr=None, 
+                random_seed=None, inplace=False):
         """
         Returns snippets of char/words/sent of various length depending on input.
-        # of snippets = groups (Default=1). # of char/word/sent of snippets = length.
-        non-cont: (Default = False): If True, returns random char/word/sent from starting point
-        randomized: (Default = False): If True, chooses a random point to start making snippets
-        rem_stopwords: Same as in Tokenize
-        ret_as_array: (Default = False): Returns one BookText object by appending all groups of snippets, else returns
-                                         an array of BookText objects
-        random_seed: When positive, generates the same snippets everytime
-        
+
+        length: the length of the snippet, in units of on
+        on: whether to divide based on characters ('char'), 
+                    words ('word'), or sentences ('sent')
+        groups (1): number of separate snippets to return
+        non_cont (False): if True, separate snippets are not-continuous, and rather are sampled
+        with_replacement (True): if non_cont, then determines whether snippets can be repeated.
+                                 Otherwise, does nothing
+        randomized (True): if False and non_cont is False, then 
+                    starts dividing snippets from the beginning of the text. Otherwise, picks
+                    a random starting point. Does nothing if non_cont is True, since snippets
+                    are already selected randomly
+        ret_as_array: (None): If True, returns array of BookText objects, one for each group
+                              If False, returns a single BookText object with all snippets combined
+                              If None (default): does True if non_cont is True,
+                                                 and False if not_cont is False.
+                                                 or, if groups = 1, does False regardless
+        random_seed (None): random seed passed to numpy
+        rem_stopword (False): passed to the tokenize functions
+        inplace (False): if True, replace text with output instead of returning. Only
+                         allowed if ret_as_arr is False
         """
         
         #Random seed set if provided by user.
         if (random_seed is not None):
             random.seed(random_seed)
+
+        # if None, takes on same value as non_cont
+        if ret_as_arr is None:
+            ret_as_arr = non_cont
+            allow_size_one_array = False
+        else:
+            allow_size_one_array = ret_as_arr
+
+        if ret_as_arr and inplace:
+            raise ValueError('Cannot assign an array of text as self._text')
         
         #Punctuations are now retained in a snippet.
         if 'char' in on.lower():
             tokens = self._text
+            # join_string determines how we glue tokens back together
+            join_string = ''
         elif 'word' in on.lower():
-            tokens = self.tokenize('word', rem_stopwords, include_punctuation=True)
+            tokens = self.tokenize('word', rem_stopwords=rem_stopwords, include_punctuation=True)
+            join_string = ' '
         elif 'sent' in on.lower():
-            tokens = self.tokenize('sent', rem_stopwords, include_punctuation=True)
+            tokens = self.tokenize('sent', rem_stopwords=rem_stopwords, include_punctuation=True)
+            join_string = ' '
         else:
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
         
         #Groups*Length needs to be lower than the tokenized text length
-        assert groups*length <= len(tokens)
+        if groups * length > len(tokens):
+            raise ValueError("Can't request more snippets than there is text:\n"
+                             "Reduce groups and/or length")
         return_array = []
         
         #Random number generated for starting point. Everything before starting point
         #is removed from array
-        if randomized:
-            start = random.randint(0, len(tokens) - groups*length)
-            tokens = tokens[start:]
-            start = 0
-        else:
-            start = 0
         
-        #For contiguous text, returns snippets next to each other.
-        if non_cont == False:
-            for gr in range(groups):
-                snippet = BookText(rawtext=''.join((" ").join(tokens[length*gr:length*(gr+1)])), 
-                               author = self.author, title = self.title, meta = self.meta)
-                return_array.append(snippet)
-                
-        #For non-contiguous text, gets the first snippet based on starting point,
-        #then deletes the elements of the snippet, 
-        #and gets a snippet again.
-        
+        if non_cont:
+            # sample starting indices (one for each group)
+            indices = np.random.choice(np.arange(len(tokens) - length + 1), replace=with_replacement,
+                                       size=groups)
         else:
-            for gr in range(groups): 
-                snippet = BookText(rawtext=''.join((" ").join(tokens[start:start+length])), 
-                               author = self.author, title = self.title, meta = self.meta)
-                snippet._text.rstrip()    
-                return_array.append(snippet)
-                
-                for index in sorted(range(start, start+length), reverse=True):
-                    if (len(tokens)-length > 0):
-                        del tokens[index] 
-                if (random_seed is not None):
-                    random.seed(random_seed + gr + 1)
-            
-                if (len(tokens)-length > 0):
-                    start = random.randint(1, len(tokens)-length)
-                else:
-                    start = 0
-                    
-        #For default behaviour, all snippets are merged and output is a single booktext object.
-        dummy_string = str()
-        for book in return_array:
-            dummy_string += book._text + str(' ')
-            
-        dummy_string.strip()
+            if randomized:
+                start = random.randint(0, len(tokens) - groups*length)
+                tokens = tokens[start:]
+            # there are [groups] indices, spaced length apart
+            indices = np.arange(0, groups) * length
+        return_array = [BookText(rawtext=join_string.join(tokens[ind:ind + length]),
+                                 author=self.author, title=self.title, meta=self.meta) 
+                                 for ind in indices]
 
-        snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
+        # if not returning as array, or if groups is 1 and it was unspecified
+        if (groups == 1 and not allow_size_one_array):
+            snip = return_array[0]
+        elif ret_as_arr:
+            snip = np.array(return_array)
+        else:
+            # thanks to the __add__ method above, this works
+            snip = np.sum(return_array)
         
-        if inplace:
+        if inplace and not ret_as_arr:
             self._text = snip._text
         else:
-            if ret_as_arr == False:
-                return snip
-            else:
-                return np.array(return_array)
+            return snip
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
