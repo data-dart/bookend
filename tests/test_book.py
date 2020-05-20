@@ -57,7 +57,7 @@ def test_snippet_on_sent(bt):
 
 
 def test_snippet_on_word(bt):
-    snip = bt.snippet(4, 'sent')
+    snip = bt.snippet(4, 'word')
     assert (len(snip.tokenize('word', rem_stopwords=False,
                              include_punctuation=True)) == 4)
 
