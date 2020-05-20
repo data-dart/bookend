@@ -39,11 +39,11 @@ class BookText():
         rex_end = r"(?i)END of (this|the|) Project Gutenberg"
         try:
             start_pos = re.search(rex_start, data).span()[1]
-        except AttributeError:  # re.search returned None
+        except AttributeError:  # re.search returned None 
             start_pos = 0
         try:
             end_pos = re.search(rex_end, data).span()[0]
-        except AttributeError:  # re.search returned None
+        except AttributeError:  # re.search returned None 
             end_pos = None
         meta_data = data[:start_pos]
         text_of_book = data[start_pos:end_pos]
@@ -85,6 +85,7 @@ class BookText():
                     self._title = None
         else:
             self._title = title
+
             
     def __add__(self, other): 
         '''
@@ -115,6 +116,7 @@ class BookText():
         else:
             title = title1
         return BookText(rawtext=self._text+' '+other._text, author=author, title=title, meta=None) 
+
 
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
@@ -157,13 +159,16 @@ class BookText():
         if deromanize:
             tokens = word_tokenize(cleaned)
             regex_roman = '^(?=[MDCLXVI])M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$'
-            cleaned = [word for word in tokens if re.search(
-                rex_roman, word, flags=re.IGNORECASE) is None]
+            deromanized = [word for word in tokens if re.search(
+                regex_roman, word, flags=re.IGNORECASE) is None]
+            cleaned = (" ").join(deromanized)
 
         if inplace:
             self._text = cleaned
         else:
             return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self.meta)
+            
+            
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[], include_punctuation=False):
