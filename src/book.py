@@ -131,14 +131,15 @@ class BookText():
         inplace (default False): replaces the text of the object with cleaned text
         """
         cleaned = self._text
-        '
 
         garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€|£|éé|ô|à|â|ê|—£|éè|ü|é|œ|î|æ|ç|‘|é—|…|ö|è'
+        
+        #TODO: substitute ligature characters properly using  https://en.wikipedia.org/wiki/List_of_words_that_may_be_spelled_with_a_ligature
+        
         cleaned = re.sub(garbage, '', cleaned)
         cleaned = cleaned.replace('-', ' ')
         cleaned = re.sub(r'\n+', ' ', cleaned)
         cleaned = cleaned.replace('-', ' ').replace('—', ' ')
-        cleaned = cleaned.replace('——', ' ').replace('——', ' ').replace('————', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
