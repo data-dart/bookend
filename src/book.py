@@ -272,7 +272,10 @@ class BookText():
                 
                 for index in sorted(range(start, start+length), reverse=True):
                     if (len(tokens)-length > 0):
-                        del tokens[index] 
+                        if 'char' in on.lower():
+                            tokens.replace(tokens[index],'')
+                        else:
+                            del tokens[index] 
                 if (random_seed is not None):
                     random.seed(random_seed + gr + 1)
             
