@@ -236,11 +236,11 @@ class BookText():
                     starts dividing snippets from the beginning of the text. Otherwise, picks
                     a random starting point. Does nothing if non_cont is True, since snippets
                     are already selected randomly
-        ret_as_array: (None): If True, returns array of BookText objects, one for each group
-                              If False, returns a single BookText object with all snippets combined
-                              If None (default): does True if non_cont is True,
-                                                 and False if not_cont is False.
-                                                 or, if groups = 1, does False regardless
+        ret_as_arr: (None): If True, returns array of BookText objects, one for each group
+                            If False, returns a single BookText object with all snippets combined
+                            If None (default): does True if non_cont is True,
+                                               and False if not_cont is False.
+                                               or, if groups = 1, does False regardless
         random_seed (None): random seed passed to numpy
         rem_stopword (False): passed to the tokenize functions
         inplace (False): if True, replace text with output instead of returning. Only
@@ -307,6 +307,7 @@ class BookText():
         else:
             # thanks to the __add__ method above, this works
             snip = np.sum(return_array)
+
         
         if inplace and not ret_as_arr:
             self._text = snip._text
