@@ -284,6 +284,7 @@ class BookText():
         #For default behaviour, all snippets are merged and output is a single booktext object.
         dummy_string = ' '.join([book._text for book in return_array])
 
+
         snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
         
         if inplace:
