@@ -58,11 +58,12 @@ def test_snippet_on_sent(bt):
 
 def test_snippet_on_word(bt):
     snip = bt.snippet(4, 'sent')
-    assert len(snip.tokenize('word')) == 4
+    assert (len(snip.tokenize('word', rem_stopwords=False,
+                             include_punctuation=True)) == 4)
 
 
 def test_snippet_char_continuity(bt):
-    snip = bt.snippet(12, 'char', non_cont=True)
-    assert snip.text not in bt.text
-    snip = bt.snippet(12, 'char', non_cont=False)
-    assert snip.text in bt.text
+    snip = bt.snippet(1, 'char', groups=10, non_cont=True)
+    assert snip.text.replace(' ', '') not in bt.text.replace(' ', '')
+    snip = bt.snippet(1, 'char', groups=10, non_cont=False)
+    assert snip.text.replace(' ', '') in bt.text.replace(' ', '')
