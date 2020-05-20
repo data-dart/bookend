@@ -273,7 +273,9 @@ class BookText():
                 for index in sorted(range(start, start+length), reverse=True):
                     if (len(tokens)-length > 0):
                         if 'char' in on.lower():
-                            tokens.replace(tokens[index],'')
+                            #Different approach to remove characters that have already appeared.
+                            #Necessary as strings do not have a delete function
+                            tokens = tokens[:index] + tokens[index+1:]
                         else:
                             del tokens[index] 
                 if (random_seed is not None):
