@@ -277,16 +277,12 @@ class BookText():
                     random.seed(random_seed + gr + 1)
             
                 if (len(tokens)-length > 0):
-                    start = random.randint(1, len(tokens)-length)
+                    start = random.randint(0, len(tokens)-length)
                 else:
                     start = 0
                     
         #For default behaviour, all snippets are merged and output is a single booktext object.
-        dummy_string = str()
-        for book in return_array:
-            dummy_string += book._text + str(' ')
-            
-        dummy_string.strip()
+        dummy_string = ' '.join([book._text for book in return_array])
 
         snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
         
