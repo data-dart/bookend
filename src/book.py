@@ -3,6 +3,8 @@ from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
 import re
 import random
 import string
+import numpy as np
+from warnings import warn
 
 
 class BookText():
@@ -82,7 +84,37 @@ class BookText():
                 else:
                     self._title = None
         else:
-            self._title = None
+            self._title = title
+            
+    def __add__(self, other): 
+        '''
+        Overloaded the addition operator for BookText. Returns text of both the booktext objects, and carries over
+        the author and title info. If authors or titles are not same, the 1st book is preferred over the second.
+        '''
+        author1 = self._author
+        author2 = other._author
+        title1 = self._title
+        title2 = other._title
+        if (author1 is None and author2 is not None):
+            author = author2
+        elif (author1 is not None and author2 is None):
+            author = author1
+        elif (author1 != author2):
+            warn("The authors are not the same. Assigning the author of the 1st Book to the resultant bookobject")
+            author = author1
+        else:
+            author = author1
+            
+        if (title1 is None and title2 is not None):
+            title = title2
+        elif (title1 is not None and title2 is None):
+            title = title1
+        elif (title1 != title2):
+            warn("The titles are not the same. Assigning the title of the 1st Book to the resultant bookobject")
+            title = title1
+        else:
+            title = title1
+        return BookText(rawtext=self._text+' '+other._text, author=author, title=title, meta=None) 
 
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
@@ -100,6 +132,8 @@ class BookText():
 
         garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
         cleaned = re.sub(garbage, '', cleaned)
+        cleaned = cleaned.replace('-', ' ')
+        cleaned = re.sub(r'\n+', ' ', cleaned)
         cleaned = cleaned.replace('-', ' ').replace('—', ' ')
 
         if lemmatize:
@@ -115,7 +149,11 @@ class BookText():
                     WNLemma.lemmatize(token, pos='n'), pos='v'), pos='a')
                     for token in tokens]
             cleaned = (" ").join(lemmatized)
-
+        else:
+            # Added this bit just to clean up unnecessary spaces in the text.
+            # The Clean Function thus returns a text with no extra spaces.
+            cleaned = re.sub('\s+', ' ', cleaned)
+            
         if deromanize:
             tokens = word_tokenize(cleaned)
             regex_roman = '^(?=[MDCLXVI])M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$'
@@ -151,7 +189,7 @@ class BookText():
             token = self._text.translate(
                 str.maketrans('', '', string.punctuation + '”“’'))
         if 'word' in on.lower():
-            token = word_tokenize(token.lower())
+            token = word_tokenize(token) #Changed here from token.lower() to token
         elif 'sent' in on.lower():
             token = sent_tokenize(token)
         else:
@@ -180,39 +218,79 @@ class BookText():
                     str.maketrans('', '', string.punctuation + '”“’'))
         return token
 
-    def snippet(self, length, on, non_cont=False, inplace=False):
+    def snippet(self, length, on, groups=1, non_cont=False, randomized=True, rem_stopwords=False, ret_as_arr=False, random_seed=None, inplace=False):
         """
+        Returns snippets of char/words/sent of various length depending on input.
+        # of snippets = groups (Default=1). # of char/word/sent of snippets = length.
+        non-cont: (Default = False): If True, returns random char/word/sent from starting point
+        randomized: (Default = False): If True, chooses a random point to start making snippets
+        rem_stopwords: Same as in Tokenize
+        ret_as_array: (Default = False): Returns one BookText object by appending all groups of snippets, else returns
+                                         an array of BookText objects
+        random_seed: When positive, generates the same snippets everytime
+        
         """
-        # TODO add ability for random seed
+        if (random_seed is not None):
+            random.seed(random_seed)
+            
         if 'char' in on.lower():
-            assert length < len(self._text)
+            tokens = self._text
         elif 'word' in on.lower():
-            tokens = word_tokenize(self._text)
-            assert length < len(tokens)
+            tokens = self.tokenize('word', rem_stopwords)
         elif 'sent' in on.lower():
-            tokens = sent_tokenize(self._text)
+            tokens = self.tokenize('sent', rem_stopwords)
         else:
             raise KeyError(
-                "Arugument 'on' must refer to character, word, or sentence")
+                "Argument 'on' must refer to character, word, or sentence")
+            
+        assert groups*length <= len(tokens)
+        return_array = []
 
-        if non_cont:
-            # TODO add functionality for non-continuous random sampling
-            pass
+        if randomized:
+            start = random.randint(0, len(tokens) - groups*length)
+            tokens = tokens[start:]
+            start = 0
         else:
-            if 'char' in on.lower():
-                start = random.randint(0, len(self._text) - length)
-                snippet = self._text[start:start + length]
-            elif 'word' in on.lower():
-                start = random.randint(0, len(tokens) - length)
-                snippet = (" ").join(tokens[start:start + length])
-            elif 'sent' in on.lower():
-                start = random.randint(0, len(tokens) - length)
-                snippet = (" ").join(tokens[start:start + length])
+            start = 0
+        
+        if non_cont == False:
+            for gr in range(groups):
+                snippet = BookText(rawtext=''.join((" ").join(tokens[length*gr:length*(gr+1)])), 
+                               author = self.author, title = self.title, meta = self.meta)
+                return_array.append(snippet)
+        else:
+            for gr in range(groups): 
+                snippet = BookText(rawtext=''.join((" ").join(tokens[start:start+length])), 
+                               author = self.author, title = self.title, meta = self.meta)
+                snippet._text.rstrip()    
+                return_array.append(snippet)
+                
+                for index in sorted(range(start, start+length), reverse=True):
+                    if (len(tokens)-length > 0):
+                        del tokens[index] 
+                if (random_seed is not None):
+                    random.seed(random_seed + gr + 1)
+            
+                if (len(tokens)-length > 0):
+                    start = random.randint(1, len(tokens)-length)
+                else:
+                    start = 0
+        
+        dummy_string = str()
+        for book in return_array:
+            dummy_string += book._text + str(' ')
+            
+        dummy_string.strip()
+
+        snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
+        
         if inplace:
-            self._text = snippet
+            self._text = snip._text
         else:
-            return BookText(rawtext=snippet, author=self.author,
-                            title=self.title, meta=self.meta)
+            if ret_as_arr == False:
+                return snip
+            else:
+                return np.array(return_array)
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
