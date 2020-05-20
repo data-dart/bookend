@@ -220,7 +220,7 @@ class BookText():
         return token
 
     def snippet(self, length, on, groups=1, non_cont=False, with_replacement=True,
-                rem_stopwords=False, randomized=True, ret_as_arr=None, 
+                rem_stopwords=False, randomized=True, ret_as_arr=False, 
                 random_seed=None, inplace=False):
         """
         Returns snippets of char/words/sent of various length depending on input.
@@ -236,11 +236,8 @@ class BookText():
                     starts dividing snippets from the beginning of the text. Otherwise, picks
                     a random starting point. Does nothing if non_cont is True, since snippets
                     are already selected randomly
-        ret_as_arr: (None): If True, returns array of BookText objects, one for each group
-                            If False, returns a single BookText object with all snippets combined
-                            If None (default): does True if non_cont is True,
-                                               and False if not_cont is False.
-                                               or, if groups = 1, does False regardless
+        ret_as_arr: (False): If True, returns array of BookText objects, one for each group
+                             If False, returns a single BookText object with all snippets combined
         random_seed (None): random seed passed to numpy
         rem_stopwords (False): passed to the tokenize functions
         inplace (False): if True, replace text with output instead of returning. Only
@@ -252,12 +249,6 @@ class BookText():
             random.seed(random_seed)
 
         # if None, takes on same value as non_cont
-        if ret_as_arr is None:
-            ret_as_arr = non_cont
-            allow_size_one_array = False
-        else:
-            allow_size_one_array = ret_as_arr
-
         if ret_as_arr and inplace:
             raise ValueError('Cannot assign an array of text as self._text')
         
@@ -299,10 +290,7 @@ class BookText():
                                  author=self.author, title=self.title, meta=self.meta) 
                                  for ind in indices]
 
-        # if not returning as array, or if groups is 1 and it was unspecified
-        if (groups == 1 and not allow_size_one_array):
-            snip = return_array[0]
-        elif ret_as_arr:
+        if ret_as_arr:
             snip = np.array(return_array)
         else:
             # thanks to the __add__ method above, this works
