@@ -242,7 +242,7 @@ class BookText():
                                                and False if not_cont is False.
                                                or, if groups = 1, does False regardless
         random_seed (None): random seed passed to numpy
-        rem_stopword (False): passed to the tokenize functions
+        rem_stopwords (False): passed to the tokenize functions
         inplace (False): if True, replace text with output instead of returning. Only
                          allowed if ret_as_arr is False
         """
