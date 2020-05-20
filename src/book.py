@@ -131,12 +131,14 @@ class BookText():
         inplace (default False): replaces the text of the object with cleaned text
         """
         cleaned = self._text
+        '
 
-        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
+        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€|£|éé|ô|à|â|ê|—£|éè|ü|é|œ|î|æ|ç|‘|é—|…|ö|è'
         cleaned = re.sub(garbage, '', cleaned)
         cleaned = cleaned.replace('-', ' ')
         cleaned = re.sub(r'\n+', ' ', cleaned)
-        cleaned = cleaned.replace('-', ' ').replace('—', ' ')
+        cleaned = cleaned.replace('-', ' ').replace('—', ' ').
+        cleaned = cleaned.replace('——', ' ').replace('——', ' ').replace('————', ' ')
 
         if lemmatize:
             WNLemma = WordNetLemmatizer()
