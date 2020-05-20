@@ -201,7 +201,7 @@ class BookText():
             # Additional words can be added to the stop word list
             # stop_words.extend(add_stopwords)
             if 'word' in on.lower():
-                token = [word for word in token if not word in stop_words]
+                token = [word for word in token if not word.lower() in stop_words]
             elif 'sent' in on.lower():
                 # TODO: Is there a better way to do this?
                 for i in range(len(token)):
