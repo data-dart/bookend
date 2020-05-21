@@ -54,20 +54,6 @@ class Author():
             raise FileNotFoundError('data_dir directory does not exist')
             
 
-    def read_all_works(self, test_data=False)
-        """
-        returns a list containing all books by author as BookText objects
-    
-        """
-        data_dir = Path(DATA_DIR)
-        if test_data:
-            data_dir = Path(TEST_DIR)
-
-        if not data_dir.exists():
-            raise FileNotFoundError('data_dir directory does not exist')
-        
-        return [BookText(str(fle)) for fle in data_dir.iterdir() if f'{self.name}_' in str(fle)]
-
     def vocab(self, rem_stopwords=True, clean=True):
         """ 
         Returns total vocabulary of the author.
