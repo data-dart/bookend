@@ -5,7 +5,9 @@ from src.book import BookText
 import numpy as np
 
 DATA_DIR = os.path.abspath(os.path.join('../data/raw')) 
+TRAIN_DIR = os.path.abspath(os.path.join('../data/train'))
 TEST_DIR = os.path.abspath(os.path.join('../data/test'))
+
 
 class Author():
     """ A class for authors """
@@ -29,17 +31,27 @@ class Author():
         self._name = lastname
         
 
-    def read_all_works(self, test_data=False):
+    def read_all_works(self, data_source=0):
         """
         returns a list containing all books by author as BookText objects
-    
+        
+        data_source codes 
+        0: All books (default)
+        1: Training books (four per author)
+        2: Testing books (One per author)
+        
         """
         data_dir = Path(DATA_DIR)
-        if test_data:
+        
+        if data_source==1:
+            data_dir = Path(TRAIN_DIR)
+            
+        elif data_source==2:
             data_dir = Path(TEST_DIR)
-
+            
         if not data_dir.exists():
             raise FileNotFoundError('data_dir directory does not exist')
+            
         return [BookText(str(fle)) for fle in data_dir.iterdir() if f'{self.name}_' in str(fle)]
 
     def vocab(self, rem_stopwords=True, clean=True):
