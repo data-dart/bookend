@@ -267,8 +267,9 @@ class BookText():
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
         
-        #Groups*Length needs to be lower than the tokenized text length
-        if groups * length > len(tokens):
+        #Groups*Length needs to be lower than the tokenized text length, but
+        # only if sampling without replacement (which is true for not non_cont)
+        if groups * length > len(tokens) and (not with_replacement or not non_cont):
             raise ValueError("Can't request more snippets than there is text:\n"
                              "Reduce groups and/or length")
         return_array = []
