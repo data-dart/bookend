@@ -311,46 +311,46 @@ class BookText():
         
     def translate_to_pos(self:BookText, inplace=False):
     
-    """
-    This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
-    """
-    
-    token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
-    
-    pos_tagged_token = [pos[1] for pos in nltk.pos_tag(token)]
-    
-    #There are too many POS tags which might throw our models off. We can group some of them together.
-    #I have hard-coded this part, as that was the easiest way to deal with it.
-    
-    nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
-    adjectives = ['JJ', 'JJR', 'JJS']
-    verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
-    adverbs = ['RB', 'RBR', 'RBS', 'WRB']
-    pronouns = ['PRP', 'PRP$', 'WP', 'WP$']
-    determiners = ['DT', 'PDT', 'WDT']
-    conjunctions = ['CC', 'IN']
+        """
+        This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
+        """
 
-    pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
-              ['DET', determiners], ['CONJ', conjunctions]])
-    
-    #This part basically replaces the specific POS tags 
-    #by the more general POS tags defined by me. 
-    #So, NNP is replaced by NOUN.
-    
-    for tok_num, pos_tok in enumerate(pos_tagged_token):
-        for row in pos_arr:
-            if pos_tok in row[1]:
-                pos_tagged_token[tok_num] = row[0]
-    
-    translated_text = (" ").join(pos_tagged_token)
-    translated_text = re.sub(r'\s([?.!,:;"](?:\s|$))', r'\1', translated_text)
-    book = BookText(rawtext = translated_text, author = self.author, title = self.title, meta = self.meta)
-    book = book.clean(lemmatize=False)
-    
-    if inplace:
-        self.text = book.text
-    else:
-        return book
+        token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
+
+        pos_tagged_token = [pos[1] for pos in nltk.pos_tag(token)]
+
+        #There are too many POS tags which might throw our models off. We can group some of them together.
+        #I have hard-coded this part, as that was the easiest way to deal with it.
+
+        nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
+        adjectives = ['JJ', 'JJR', 'JJS']
+        verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
+        adverbs = ['RB', 'RBR', 'RBS', 'WRB']
+        pronouns = ['PRP', 'PRP$', 'WP', 'WP$']
+        determiners = ['DT', 'PDT', 'WDT']
+        conjunctions = ['CC', 'IN']
+
+        pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
+                  ['DET', determiners], ['CONJ', conjunctions]])
+
+        #This part basically replaces the specific POS tags 
+        #by the more general POS tags defined by me. 
+        #So, NNP is replaced by NOUN.
+
+        for tok_num, pos_tok in enumerate(pos_tagged_token):
+            for row in pos_arr:
+                if pos_tok in row[1]:
+                    pos_tagged_token[tok_num] = row[0]
+
+        translated_text = (" ").join(pos_tagged_token)
+        translated_text = re.sub(r'\s([?.!,:;"](?:\s|$))', r'\1', translated_text)
+        book = BookText(rawtext = translated_text, author = self.author, title = self.title, meta = self.meta)
+        book = book.clean(lemmatize=False)
+
+        if inplace:
+            self.text = book.text
+        else:
+            return book
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
