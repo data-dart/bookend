@@ -1,5 +1,5 @@
 from nltk.corpus import stopwords
-from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
+from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer, pos_tag
 import re
 import random
 import string
@@ -40,6 +40,7 @@ class BookText():
             # the DOTALL flag allows the regex to match newline characters,
             # which may be found if the title has a subtitle
             start_pos = re.search(rex_start, data, flags=re.DOTALL).span()[1]
+
         except AttributeError:  # re.search returned None 
             start_pos = 0
         try:
@@ -90,7 +91,6 @@ class BookText():
         if self._title is not None:
             # removing newlines and excessive white space in title
             self._title = re.sub('\s+', ' ', self._title)
-
             
     def __add__(self, other): 
         '''
@@ -231,7 +231,6 @@ class BookText():
                 random_seed=None, inplace=False):
         """
         Returns snippets of char/words/sent of various length depending on input.
-
         length: the length of the snippet, in units of on
         on: whether to divide based on characters ('char'), 
                     words ('word'), or sentences ('sent')
@@ -309,6 +308,49 @@ class BookText():
             self._text = snip._text
         else:
             return snip
+        
+    def translate_to_pos(self, inplace=False):
+    
+        """
+        This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
+        """
+
+        token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
+
+        pos_tagged_token = [pos[1] for pos in pos_tag(token)]
+
+        #There are too many POS tags which might throw our models off. We can group some of them together.
+        #I have hard-coded this part, as that was the easiest way to deal with it.
+
+        nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
+        adjectives = ['JJ', 'JJR', 'JJS']
+        verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
+        adverbs = ['RB', 'RBR', 'RBS', 'WRB']
+        pronouns = ['PRP', 'PRP$', 'WP', 'WP$']
+        determiners = ['DT', 'PDT', 'WDT']
+        conjunctions = ['CC', 'IN']
+
+        pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
+                  ['DET', determiners], ['CONJ', conjunctions]])
+
+        #This part basically replaces the specific POS tags 
+        #by the more general POS tags defined by me. 
+        #So, NNP is replaced by NOUN.
+
+        for tok_num, pos_tok in enumerate(pos_tagged_token):
+            for row in pos_arr:
+                if pos_tok in row[1]:
+                    pos_tagged_token[tok_num] = row[0]
+
+        translated_text = (" ").join(pos_tagged_token)
+        translated_text = re.sub(r'\s([?.!,:;"](?:\s|$))', r'\1', translated_text)
+        book = BookText(rawtext = translated_text, author = self.author, title = self.title, meta = self.meta)
+        book = book.clean(lemmatize=False)
+
+        if inplace:
+            self.text = book.text
+        else:
+            return book
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
