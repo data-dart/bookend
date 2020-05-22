@@ -33,15 +33,19 @@ class BookText():
         else:
             data = rawtext
         # Using regex to mark the start and end of the book
-        rex_start = r"START OF (THIS|THE) PROJECT GUTENBERG EBOOK (.*)\s*\*\*\*"
+        # The question mark lets us match the first instance of '***' only
+        rex_start = r"START OF (THIS|THE) PROJECT GUTENBERG EBOOK (.*?)\s*\*\*\*"
         rex_end = r"(?i)END of (this|the|) Project Gutenberg"
         try:
-            start_pos = re.search(rex_start, data).span()[1]
-        except AttributeError:  # re.search returned None
+            # the DOTALL flag allows the regex to match newline characters,
+            # which may be found if the title has a subtitle
+            start_pos = re.search(rex_start, data, flags=re.DOTALL).span()[1]
+            
+        except AttributeError:  # re.search returned None 
             start_pos = 0
         try:
             end_pos = re.search(rex_end, data).span()[0]
-        except AttributeError:  # re.search returned None
+        except AttributeError:  # re.search returned None 
             end_pos = None
         meta_data = data[:start_pos]
         text_of_book = data[start_pos:end_pos]
@@ -83,6 +87,13 @@ class BookText():
                     self._title = None
         else:
             self._title = title
+
+        if self._title is not None:
+            # removing newlines and excessive white space in title
+            self._title = re.sub('\s+', ' ', self._title)
+   
+         
+
             
     def __add__(self, other): 
         '''
@@ -114,6 +125,7 @@ class BookText():
             title = title1
         return BookText(rawtext=self._text+' '+other._text, author=author, title=title, meta=None) 
 
+
     def clean(self, lemmatize=True, deromanize=False, lemma_pos='v', inplace=False):
         """Cleans the full text
         Returns a new BookText object with cleaned text derived 
@@ -126,7 +138,10 @@ class BookText():
         """
         cleaned = self._text
 
-        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€'
+        garbage = '\ufeff|â€™|â€"|â€œ|â€˜|â€\x9d|â€œi|_|â€|£|éé|ô|à|â|ê|—£|éè|ü|é|œ|î|æ|ç|‘|é—|…|ö|è'
+        
+        #TODO: substitute ligature characters properly using  https://en.wikipedia.org/wiki/List_of_words_that_may_be_spelled_with_a_ligature
+        
         cleaned = re.sub(garbage, '', cleaned)
         cleaned = cleaned.replace('-', ' ')
         cleaned = re.sub(r'\n+', ' ', cleaned)
@@ -153,13 +168,16 @@ class BookText():
         if deromanize:
             tokens = word_tokenize(cleaned)
             regex_roman = '^(?=[MDCLXVI])M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$'
-            cleaned = [word for word in tokens if re.search(
-                rex_roman, word, flags=re.IGNORECASE) is None]
+            deromanized = [word for word in tokens if re.search(
+                regex_roman, word, flags=re.IGNORECASE) is None]
+            cleaned = (" ").join(deromanized)
 
         if inplace:
             self._text = cleaned
         else:
             return BookText(filepath=None, rawtext=cleaned, author=self.author, title=self.title, meta=self.meta)
+            
+            
 
     def tokenize(self, on, rem_stopwords=True, stopword_lang='english',
                  add_stopwords=[], include_punctuation=False):
@@ -193,7 +211,7 @@ class BookText():
             # Additional words can be added to the stop word list
             # stop_words.extend(add_stopwords)
             if 'word' in on.lower():
-                token = [word for word in token if not word in stop_words]
+                token = [word for word in token if not word.lower() in stop_words]
             elif 'sent' in on.lower():
                 # TODO: Is there a better way to do this?
                 for i in range(len(token)):
@@ -211,94 +229,129 @@ class BookText():
                     str.maketrans('', '', string.punctuation + '”“’'))
         return token
 
-    def snippet(self, length, on, groups=1, non_cont=False, randomized=True, rem_stopwords=False, ret_as_arr=False, random_seed=None, inplace=False):
+    def snippet(self, length, on, groups=1, non_cont=False, with_replacement=True,
+                rem_stopwords=False, randomized=True, ret_as_arr=False, 
+                random_seed=None, inplace=False):
         """
         Returns snippets of char/words/sent of various length depending on input.
-        # of snippets = groups (Default=1). # of char/word/sent of snippets = length.
-        non-cont: (Default = False): If True, returns random char/word/sent from starting point
-        randomized: (Default = False): If True, chooses a random point to start making snippets
-        rem_stopwords: Same as in Tokenize
-        ret_as_array: (Default = False): Returns one BookText object by appending all groups of snippets, else returns
-                                         an array of BookText objects
-        random_seed: When positive, generates the same snippets everytime
-        
+        length: the length of the snippet, in units of on
+        on: whether to divide based on characters ('char'), 
+                    words ('word'), or sentences ('sent')
+        groups (1): number of separate snippets to return
+        non_cont (False): if True, separate snippets are not-continuous, and rather are sampled
+        with_replacement (True): if non_cont, then determines whether snippets can be repeated.
+                                 Otherwise, does nothing
+        randomized (True): if False and non_cont is False, then 
+                    starts dividing snippets from the beginning of the text. Otherwise, picks
+                    a random starting point. Does nothing if non_cont is True, since snippets
+                    are already selected randomly
+        ret_as_arr: (False): If True, returns array of BookText objects, one for each group
+                             If False, returns a single BookText object with all snippets combined
+        random_seed (None): random seed passed to numpy
+        rem_stopwords (False): passed to the tokenize functions
+        inplace (False): if True, replace text with output instead of returning. Only
+                         allowed if ret_as_arr is False
         """
         
         #Random seed set if provided by user.
         if (random_seed is not None):
             random.seed(random_seed)
+
+        # if None, takes on same value as non_cont
+        if ret_as_arr and inplace:
+            raise ValueError('Cannot assign an array of text as self._text')
         
         #Punctuations are now retained in a snippet.
         if 'char' in on.lower():
             tokens = self._text
+            # join_string determines how we glue tokens back together
+            join_string = ''
         elif 'word' in on.lower():
-            tokens = self.tokenize('word', rem_stopwords, include_punctuation=True)
+            tokens = self.tokenize('word', rem_stopwords=rem_stopwords, include_punctuation=True)
+            join_string = ' '
         elif 'sent' in on.lower():
-            tokens = self.tokenize('sent', rem_stopwords, include_punctuation=True)
+            tokens = self.tokenize('sent', rem_stopwords=rem_stopwords, include_punctuation=True)
+            join_string = ' '
         else:
             raise KeyError(
                 "Argument 'on' must refer to character, word, or sentence")
         
-        #Groups*Length needs to be lower than the tokenized text length
-        assert groups*length <= len(tokens)
+        #Groups*Length needs to be lower than the tokenized text length, but
+        # only if sampling without replacement (which is true for not non_cont)
+        if groups * length > len(tokens) and (not with_replacement or not non_cont):
+            raise ValueError("Can't request more snippets than there is text:\n"
+                             "Reduce groups and/or length")
         return_array = []
         
         #Random number generated for starting point. Everything before starting point
         #is removed from array
-        if randomized:
-            start = random.randint(0, len(tokens) - groups*length)
-            tokens = tokens[start:]
-            start = 0
+        
+        if non_cont:
+            # sample starting indices (one for each group)
+            indices = np.random.choice(np.arange(len(tokens) - length + 1), replace=with_replacement,
+                                       size=groups)
         else:
-            start = 0
-        
-        #For contiguous text, returns snippets next to each other.
-        if non_cont == False:
-            for gr in range(groups):
-                snippet = BookText(rawtext=''.join((" ").join(tokens[length*gr:length*(gr+1)])), 
-                               author = self.author, title = self.title, meta = self.meta)
-                return_array.append(snippet)
-                
-        #For non-contiguous text, gets the first snippet based on starting point,
-        #then deletes the elements of the snippet, 
-        #and gets a snippet again.
-        
+            if randomized:
+                start = random.randint(0, len(tokens) - groups*length)
+                tokens = tokens[start:]
+            # there are [groups] indices, spaced length apart
+            indices = np.arange(0, groups) * length
+        return_array = [BookText(rawtext=join_string.join(tokens[ind:ind + length]),
+                                 author=self.author, title=self.title, meta=self.meta) 
+                                 for ind in indices]
+
+        if ret_as_arr:
+            snip = np.array(return_array)
         else:
-            for gr in range(groups): 
-                snippet = BookText(rawtext=''.join((" ").join(tokens[start:start+length])), 
-                               author = self.author, title = self.title, meta = self.meta)
-                snippet._text.rstrip()    
-                return_array.append(snippet)
-                
-                for index in sorted(range(start, start+length), reverse=True):
-                    if (len(tokens)-length > 0):
-                        if 'char' in on.lower():
-                            #Different approach to remove characters that have already appeared.
-                            #Necessary as strings do not have a delete function
-                            tokens = tokens[:index] + tokens[index+1:]
-                        else:
-                            del tokens[index] 
-                if (random_seed is not None):
-                    random.seed(random_seed + gr + 1)
-            
-                if (len(tokens)-length > 0):
-                    start = random.randint(0, len(tokens)-length)
-                else:
-                    start = 0
-                    
-        #For default behaviour, all snippets are merged and output is a single booktext object.
-        dummy_string = ' '.join([book._text for book in return_array])
+            # thanks to the __add__ method above, this works
+            snip = np.sum(return_array)
 
-
-        snip = BookText(rawtext=dummy_string, author=self.author, title=self.title, meta=self.meta)
         
-        if inplace:
+        if inplace and not ret_as_arr:
             self._text = snip._text
         else:
-            if ret_as_arr == False:
-                return snip
-            else:
-                return np.array(return_array)
+            return snip
+        
+    def translate_to_pos(self: BookText, inplace = False):
+    
+    """
+    This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
+    """
+    
+    token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
+    
+    pos_tagged_token = [pos[1] for pos in nltk.pos_tag(token)]
+    
+    '''There are too many POS tags which might throw our models off. We can group some of them together.'''
+    '''I have hard-coded this part, as that was the easiest way to deal with it.'''
+    
+    nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
+    adjectives = ['JJ', 'JJR', 'JJS']
+    verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
+    adverbs = ['RB', 'RBR', 'RBS', 'WRB']
+    pronouns = ['PRP', 'PRP$', 'WP', 'WP$']
+    determiners = ['DT', 'PDT', 'WDT']
+    conjunctions = ['CC', 'IN']
+
+    pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
+              ['DET', determiners], ['CONJ', conjunctions]])
+    
+    '''This part basically replaces the specific POS tags by the more general POS tags defined by me. So, NNP is replaced by NOUN.'''
+    
+    for tok_num, pos_tok in enumerate(pos_tagged_token):
+        for row in pos_arr:
+            if pos_tok in row[1]:
+                pos_tagged_token[tok_num] = row[0]
+    
+    translated_text = (" ").join(pos_tagged_token)
+    translated_text = re.sub(r'\s([?.!,:;"](?:\s|$))', r'\1', translated_text)
+    book = BookText(rawtext = translated_text, author = self.author, title = self.title, meta = self.meta)
+    book = book.clean(lemmatize=False)
+    
+    if inplace:
+        self.text = book.text
+    else:
+        return book
 
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
