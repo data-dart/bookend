@@ -40,7 +40,7 @@ class BookText():
             # the DOTALL flag allows the regex to match newline characters,
             # which may be found if the title has a subtitle
             start_pos = re.search(rex_start, data, flags=re.DOTALL).span()[1]
-            
+
         except AttributeError:  # re.search returned None 
             start_pos = 0
         try:
@@ -91,9 +91,6 @@ class BookText():
         if self._title is not None:
             # removing newlines and excessive white space in title
             self._title = re.sub('\s+', ' ', self._title)
-   
-         
-
             
     def __add__(self, other): 
         '''
