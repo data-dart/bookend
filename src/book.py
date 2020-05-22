@@ -1,5 +1,5 @@
 from nltk.corpus import stopwords
-from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer
+from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer, pos_tag
 import re
 import random
 import string
@@ -309,7 +309,7 @@ class BookText():
         else:
             return snip
         
-    def translate_to_pos(self:BookText, inplace=False):
+    def translate_to_pos(self, inplace=False):
     
         """
         This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
@@ -317,7 +317,7 @@ class BookText():
 
         token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
 
-        pos_tagged_token = [pos[1] for pos in nltk.pos_tag(token)]
+        pos_tagged_token = [pos[1] for pos in pos_tag(token)]
 
         #There are too many POS tags which might throw our models off. We can group some of them together.
         #I have hard-coded this part, as that was the easiest way to deal with it.
