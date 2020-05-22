@@ -309,7 +309,7 @@ class BookText():
         else:
             return snip
         
-    def translate_to_pos(self: BookText, inplace = False):
+    def translate_to_pos(self:BookText, inplace=False):
     
     """
     This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
@@ -319,8 +319,8 @@ class BookText():
     
     pos_tagged_token = [pos[1] for pos in nltk.pos_tag(token)]
     
-    '''There are too many POS tags which might throw our models off. We can group some of them together.'''
-    '''I have hard-coded this part, as that was the easiest way to deal with it.'''
+    #There are too many POS tags which might throw our models off. We can group some of them together.
+    #I have hard-coded this part, as that was the easiest way to deal with it.
     
     nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
     adjectives = ['JJ', 'JJR', 'JJS']
@@ -333,7 +333,9 @@ class BookText():
     pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
               ['DET', determiners], ['CONJ', conjunctions]])
     
-    '''This part basically replaces the specific POS tags by the more general POS tags defined by me. So, NNP is replaced by NOUN.'''
+    #This part basically replaces the specific POS tags 
+    #by the more general POS tags defined by me. 
+    #So, NNP is replaced by NOUN.
     
     for tok_num, pos_tok in enumerate(pos_tagged_token):
         for row in pos_arr:
