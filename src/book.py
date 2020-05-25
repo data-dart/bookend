@@ -11,7 +11,7 @@ class BookText():
     """A class for reading and manipulating texts"""
 
     def __init__(self, filepath=None, rawtext=None, encoding='utf-8', file_format='standard',
-                 clean=False, author=None, title=None, meta=None, infer_toc=True):
+                 clean=True, author=None, title=None, meta=None, infer_toc=True):
         """Constructor for BookText
         parameters:
             **NB** one of filepath or rawtext must be specified
@@ -19,7 +19,7 @@ class BookText():
             rawtext (None): a raw text string
             encoding ("utf-8"): the encoding to use
             file_format ("standard"): format of the filepath string, used to assign author and title information if it cannot be found in the meta data
-            clean (False): whether to clean the text on initializing
+            clean (True): whether to clean (lightly) the text on initializing
             author (None): if not specified, inferred from text
             title (None): if not specified, inferred from text
             infer_toc (True): will attempt to infer the TOC from the text
@@ -61,7 +61,7 @@ class BookText():
 
         self._text = text_of_book
         if clean:
-            self.clean(inplace=True)
+            self.clean(inplace=True, lemmatize=False)
         self.start_pos = start_pos
         self.end_pos = end_pos
         self._meta = meta or meta_data
