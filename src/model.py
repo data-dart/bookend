@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from .book import BookText
+from book import BookText
 import textstat
 from scipy.stats import skew
 
@@ -12,7 +12,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_extraction.text import CountVectorizer
-
+from nltk.util import ngrams
+import collections
 
 def _convert_to_dataframe(text):
     """Converts text to a DataFrame as a preprocessing step
@@ -201,6 +202,85 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
         self.bow = vocab_dict
         
         
+class SyntacticFeatures(BaseEstimator, TransformerMixin):
+    
+    """ Defining my own POS tags. """
+    nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
+    adjectives = ['JJ', 'JJR', 'JJS']
+    verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
+    adverbs = ['RB', 'RBR', 'RBS', 'WRB']
+    pronouns = ['PRP', 'PRP$', 'WP', 'WP$']
+    determiners = ['DT', 'PDT', 'WDT']
+    conjunctions = ['CC', 'IN']
+    
+    """ Arrays to store different features"""
+    global pos_arr, columns, pos_bigram_ordered_pairs, pos_trigram_ordered_pairs, final_columns
+    
+    pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], 
+                        ['PRN', pronouns], ['DET', determiners], ['CONJ', conjunctions]])
+    
+    columns=[pos_arr[i][0] for i in range(np.size(pos_arr,0))]
+    pos_bigram_ordered_pairs = [(columns[i], columns[j]) for i in range(len(columns)) for j in range(len(columns))]
+    pos_trigram_ordered_pairs = [(columns[i], columns[j], columns[k]) 
+                                 for i in range(len(columns)) for j in range(len(columns)) 
+                                 for k in range(len(columns))]
+
+    """ Final set of features which will be returned upon call. """
+    
+    final_columns = columns + pos_bigram_ordered_pairs + pos_trigram_ordered_pairs
+    
+    def __init__(self):
+        test_var = 10
+        
+    def transform(self, X):
+        """Transforms the text into syntactic features"""
+        text_frame = _convert_to_dataframe(X)
+        return text_frame.apply(self._syntactic_features_one_row, axis=1)
+
+    def fit(self, X, y):
+        return self
+    
+    def _syntactic_features_one_row(self, row):
+        """Creates a feature vector for one text sample"""
+        bt = BookText(rawtext=row['text'])
+        bt = bt.clean(lemmatize=False, inplace=False)
+        
+        """ This gives the distribution for n-grams generated from POS."""
+
+        def get_pos_ngrams(bt: BookText):
+            pos = bt.translate_to_pos()
+            pos_as_arr = pos.tokenize('word',rem_stopwords=False, include_punctuation=False)
+            pos_unigram = ngrams(pos_as_arr, 1)
+            pos_bigrams = ngrams(pos_as_arr, 2)
+            pos_trigrams = ngrams(pos_as_arr, 3)
+            pos_unigram_freq = collections.Counter(pos_unigram)
+            pos_bigram_freq = collections.Counter(pos_bigrams)
+            pos_trigram_freq = collections.Counter(pos_trigrams)
+            pos_unigram_counter = np.zeros(len(columns))
+            pos_bigram_counter = np.zeros(len(pos_bigram_ordered_pairs))
+            pos_trigram_counter = np.zeros(len(pos_trigram_ordered_pairs))
+            
+            for i, elem in enumerate(columns):
+                pos_unigram_counter[i] = pos_unigram_freq[elem]
+
+            for i, elem in enumerate(pos_bigram_ordered_pairs):
+                pos_bigram_counter[i] = pos_bigram_freq[elem]
+
+            for i, elem in enumerate(pos_trigram_ordered_pairs):
+                pos_trigram_counter[i] = pos_trigram_freq[elem]
+
+            pos_ngram_counter = np.append(pos_unigram_counter, pos_bigram_counter)
+            pos_ngram_counter = np.append(pos_ngram_counter, pos_trigram_counter)
+            return pos_ngram_counter
+        
+        n_gram_counts = get_pos_ngrams(bt)
+        word_count = bt.word_count(rem_stopwords = False, include_punctuation=True)
+        
+        if word_count != 0:
+            n_gram_counts = n_gram_counts/word_count
+
+        return pd.Series(n_gram_counts, index=final_columns)
+        
 class NGramFeatures(BaseEstimator, TransformerMixin):
     """Converts text into n-gram features"""
 
@@ -221,19 +301,6 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
     def build_graph(self, corpus):
         self.topic_graph = derived_graph
 
-
-class POSFeatures(BaseEstimator, TransformerMixin):
-    """Converts text to POS features"""
-
-    def __init__(self):
-        pass
-
-    def transform(self, X):
-        # do whatever is needed to build features
-        return transformed_X
-
-    def fit(self, X, y=None):
-        return self
 
 
 # an example usage incorporating these into a pipe
