@@ -3,6 +3,8 @@ from nltk import FreqDist, word_tokenize, sent_tokenize, WordNetLemmatizer, pos_
 import re
 import random
 import string
+import ngram_graphs
+import copy
 import numpy as np
 from warnings import warn
 
@@ -314,14 +316,14 @@ class BookText():
         """
         This function will take the book in, assign POS tags for all the words, and return a book with the POS tags only.
         """
-
+        
         token = self.tokenize('word', rem_stopwords = False, include_punctuation=True)
-
+        
         pos_tagged_token = [pos[1] for pos in pos_tag(token)]
-
+        
         #There are too many POS tags which might throw our models off. We can group some of them together.
         #I have hard-coded this part, as that was the easiest way to deal with it.
-
+        
         nouns = ['NN', 'NNS', 'NNP', 'NNPS']   
         adjectives = ['JJ', 'JJR', 'JJS']
         verbs = ['MD', 'VB', 'VBG', 'VBN', 'VBP', 'VBZ']
@@ -332,21 +334,21 @@ class BookText():
 
         pos_arr = np.array([['NOUN', nouns], ['ADJ', adjectives], ['VERB', verbs], ['ADV', adverbs], ['PRN', pronouns],
                   ['DET', determiners], ['CONJ', conjunctions]])
-
+        
         #This part basically replaces the specific POS tags 
         #by the more general POS tags defined by me. 
         #So, NNP is replaced by NOUN.
-
+        
         for tok_num, pos_tok in enumerate(pos_tagged_token):
             for row in pos_arr:
                 if pos_tok in row[1]:
                     pos_tagged_token[tok_num] = row[0]
-
+        
         translated_text = (" ").join(pos_tagged_token)
         translated_text = re.sub(r'\s([?.!,:;"](?:\s|$))', r'\1', translated_text)
         book = BookText(rawtext = translated_text, author = self.author, title = self.title, meta = self.meta)
         book = book.clean(lemmatize=False)
-
+        
         if inplace:
             self.text = book.text
         else:
@@ -375,6 +377,16 @@ class BookText():
         # sparse matrix of most frequently used words in the english language
         # unique words
         pass
+
+    def make_graph(self, n, wordgram=False):
+        """Returns a graph representation of the n-grams in the BookText object
+        
+        n: Length of n-gram used to construct the graph
+        wordgram (default False): If true will create a word-gram graph instead of the default char-gram
+        """
+        generator = ngram_graphs.Generator(n=n, kind='networkx')
+        graph = generator.generate_text_graphs([self.text], weight=1.0, wordgram=wordgram)
+        return graph[0]
 
     @property
     def meta(self):
