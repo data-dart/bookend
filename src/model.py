@@ -218,44 +218,44 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
             dataframe['graphs_'+str(n)] = dataframe.apply(lambda row:row.book.make_graph(n, wordgram=wordgram), axis=1)
 
     def make_topic_graph(self, topics):
-    """Returns a topic graph or topic graphs dependent on the type of the argument topics
+        """Returns a topic graph or topic graphs dependent on the type of the argument topics
 
-    topics (list or dict): If list, will create a topic graph from every graph in the list
-                           If dict, will create a topic graph for each key. A key value pair is
-                           expected to be the (key) topic name and (value) list of graphs from
-                           which to create the topic graph. Will return a dictionary with the same
-                           keys but who's values correspond to the topic graph
-    """
+        topics (list or dict): If list, will create a topic graph from every graph in the list
+                               If dict, will create a topic graph for each key. A key value pair is
+                               expected to be the (key) topic name and (value) list of graphs from
+                               which to create the topic graph. Will return a dictionary with the same
+                               keys but who's values correspond to the topic graph
+        """
 
-    if (isinstance(topics,list)):
-        # Creating empty object that will become the topic graph
-        g_topic = None
-        for i, graph in enumerate(topics):
-            if g_topic is None:
-                g_topic = graph
-            else:
-                gu = nx.compose(g_topic, graph)
-                for edge in graph.edges:
-                    if (edge not in g_topic.edges):
-                        gu.edges[edge[0],edge[1]]['weight'] = graph.edges[edge[0],edge[1]]['weight']
-                    elif (edge not in graph.edges):
-                        gu.edges[edge[0],edge[1]]['weight'] = g_topic.edges[edge[0],edge[1]]['weight']
-                    else:
-                        weight_g_topic = g_topic.get_edge_data(edge[0],edge[1])['weight']
-                        weight_gdi = graph.get_edge_data(edge[0],edge[1])['weight']
-                        gu.edges[edge[0],edge[1]]['weight'] = weight_g_topic + (weight_gdi - weight_g_topic)/i
-                g_topic = copy.deepcopy(gu)
-        return g_topic
+        if (isinstance(topics,list)):
+            # Creating empty object that will become the topic graph
+            g_topic = None
+            for i, graph in enumerate(topics):
+                if g_topic is None:
+                    g_topic = graph
+                else:
+                    gu = nx.compose(g_topic, graph)
+                    for edge in graph.edges:
+                        if (edge not in g_topic.edges):
+                            gu.edges[edge[0],edge[1]]['weight'] = graph.edges[edge[0],edge[1]]['weight']
+                        elif (edge not in graph.edges):
+                            gu.edges[edge[0],edge[1]]['weight'] = g_topic.edges[edge[0],edge[1]]['weight']
+                        else:
+                            weight_g_topic = g_topic.get_edge_data(edge[0],edge[1])['weight']
+                            weight_gdi = graph.get_edge_data(edge[0],edge[1])['weight']
+                            gu.edges[edge[0],edge[1]]['weight'] = weight_g_topic + (weight_gdi - weight_g_topic)/i
+                    g_topic = copy.deepcopy(gu)
+            return g_topic
 
-    elif (isinstance(topics,dict)):
-        topic_dict = dict.fromkeys(topics.keys(),[])
-        for key in topic_dict:
-            graphs = topics[key]
-            topic_dict[key] = make_topic_graph(graphs)
-        return topic_dict
+        elif (isinstance(topics,dict)):
+            topic_dict = dict.fromkeys(topics.keys(),[])
+            for key in topic_dict:
+                graphs = topics[key]
+                topic_dict[key] = make_topic_graph(graphs)
+            return topic_dict
 
-    else:
-        raise ValueError("'topics' must be either a list or dict object")
+        else:
+            raise ValueError("'topics' must be either a list or dict object")
 
     def get_graph_metrics(dataframe, topic_graphs, graph_key, col_mod):
         for i in dataframe.index:
