@@ -197,9 +197,7 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             vocab_dict[bow[i]] = i
         
         self.bow = vocab_dict
-        
-<<<<<<< HEAD
-        
+                
 class SyntacticFeatures(BaseEstimator, TransformerMixin):
     
     """ Defining my own POS tags. """
@@ -279,9 +277,8 @@ class SyntacticFeatures(BaseEstimator, TransformerMixin):
 
         return pd.Series(n_gram_counts, index=final_columns)
         
-=======
 # This has not been tested yet        
->>>>>>> 3d604c9e063fafd5b409505a04573d1afd93f074
+
 class NGramFeatures(BaseEstimator, TransformerMixin):
     """Converts text into n-gram features"""
 
