@@ -9,6 +9,7 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import VotingClassifier
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 def _convert_to_dataframe(text):
@@ -64,36 +65,85 @@ class LexicalFeatures(BaseEstimator, TransformerMixin):
 
 
 class BOWFeatures(BaseEstimator, TransformerMixin):
-    """Converts text into bag of words features
+    """
+    Class for fitting a Bag-of-words model on the data
+    
+    Usage Example in a pipeline:
+    
+    bow_pipe = Pipeline([('build', BOWFeatures()),
+                    ('lr_bow', LogisticRegression(max_iter = 500, C = 100))
+                    ])                
 
-    More description
+
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, bow={}):
+        """
+        :vocabulary: is a bag of words as a dictionary if it is available.
+        
+        """
+        self.bow = bow
+        
 
     def transform(self, X):
-        """Transforms data into features, assuming self.bow exists"""
-        text_frame = _convert_to_dataframe(X)
-        return text_frame.apply(self._compare_bow_one_row, axis=1)
+        """vectorizes a row of text data using the bag of words"""
+
+        vectorizer = CountVectorizer(analyzer='word',token_pattern=r'\w{1,}',
+                                ngram_range=(1, 1), vocabulary=self.bow)
+        
+        XX = vectorizer.fit_transform(X)
+        
+        return XX
+        
 
     def fit(self, X, y=None):
         """Fit DataFrame by building bag of words"""
         text_frame = _convert_to_dataframe(X)
-        self.build_bow(corpus=' '.join(text_frame['text']))
+        if self.bow =={}:
+            self.build_bow(corpus = text_frame['text'].values)
         return self
 
     def build_bow(self, corpus):
-        """build a bag of words from a list of words"""
-        # do whatever
-        # figure out what derived_bag_of_words is
-        self.bow = derived_bag_of_words
+        """
+        Returns a dict of unique words in the corpus
 
-    def _compare_bow_one_row(self, text):
-        """This does whatever bag of words comparison it needs"""
-        pass
+        Input:
+        A corpus in the form of a np. array
+
+        Output: 
+        Corpus vocabulary as a dictionary.
+
+        dict_key : word
+        dict_value : an integer label for the key
+
+        """
+        #---------------STEP-1: clean, tokenize, lower-------------------------------------------
+        words = []
+        for i in range(len(corpus)):
+            b = BookText(rawtext = corpus[i])
+            bb = b.clean(deromanize=True, lemmatize=True) 
+            words += bb.tokenize(on='words', rem_stopwords=True)
+        words = [w.lower() for w in words]
+
+        words = list(set(words)) #Making a set early on reduces the size to speed things up
 
 
+        #---------------STEP-2: remove all numeric characters ------------------------------------
+        no_nums = []
+        for word in words:
+            if (not any(ch.isdigit() for ch in word)):
+                no_nums.append(word)
+
+        #---------------STEP-3: Package as a dictionary ------------------------------------------
+        bow = no_nums
+        vocab_dict = {}
+        for i in range(len(bow)):
+            vocab_dict[bow[i]] = i
+        
+        self.bow = vocab_dict
+        return vocab_dict
+        
+        
 class NGramFeatures(BaseEstimator, TransformerMixin):
     """Converts text into n-gram features"""
 
@@ -130,18 +180,18 @@ class POSFeatures(BaseEstimator, TransformerMixin):
 
 
 # an example usage incorporating these into a pipe
-lexical_pipe = Pipeline([('features', Pipeline([
-                              ('build', LexicalFeatures()),
-                              ('scale', StandardScaler())
-                              ])
-                          ),
-                         ('svc', SVC())])
+# lexical_pipe = Pipeline([('features', Pipeline([
+#                               ('build', LexicalFeatures()),
+#                               ('scale', StandardScaler())
+#                               ])
+#                           ),
+#                          ('svc', SVC())])
 
 
 # eventually, we'll build a bunch of pipes,
 # e.g. lexical_pipe, bow_pipe, pos_pipe, ngram_pipe
 # if we want to exclude any of these from the model, we can set
 # e.g. model.set_params(lexical='drop'), and it will drop them
-model = VotingClassifier([('lexical', lexical_pipe),
-                          ('bow', bow_pipe)], 
-                         voting='soft')
+# model = VotingClassifier([('lexical', lexical_pipe),
+#                           ('bow', bow_pipe)], 
+#                          voting='soft')
