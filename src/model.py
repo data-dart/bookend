@@ -141,6 +141,10 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         """vectorizes a row of text data using the bag of words"""
+        
+        X = np.array(X)
+        if X.ndim > 1:
+            X = X.ravel()
 
         vectorizer = CountVectorizer(analyzer='word',token_pattern=r'\w{1,}',
                                 ngram_range=(1, 1), vocabulary=self.bow)
@@ -195,7 +199,6 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             vocab_dict[bow[i]] = i
         
         self.bow = vocab_dict
-        return vocab_dict
         
         
 class NGramFeatures(BaseEstimator, TransformerMixin):
