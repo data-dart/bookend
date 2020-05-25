@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from .book import BookText
+import textstat
+from scipy.stats import skew
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -58,11 +60,63 @@ class LexicalFeatures(BaseEstimator, TransformerMixin):
         """Creates a feature vector from one text sample"""
         bt = BookText(rawtext=row['text'])
         bt.clean(lemmatize=False, inplace=True)
-        wc = bt.word_count(rem_stopwords=False)
-        wc_nostop = bt.word_count(rem_stopwords=True)
-        sent = bt.sentence_count()
-        return pd.Series([wc / sent, wc_nostop / sent],
-                         index=['word_per_sent', 'word_per_sent_nostop'])
+
+        # sentences
+        sens = bt.tokenize('sent', rem_stopwords=False, include_punctuation=False)
+        # words
+        all_words = bt.tokenize('word', rem_stopwords=False)
+        # words (no stopwords)
+        all_words_nostop = bt.tokenize('word', rem_stopwords=True)
+        # unique lemmatizations, no stopwords
+        all_words_lemmatized_nostop = bt.clean(lemmatize=True).tokenize('word', 
+                                                                        rem_stopwords=True, 
+                                                                        include_punctuation=False)
+        unique_word_frac = len(np.unique(all_words_lemmatized_nostop)) / len(all_words_nostop)
+        # for use in textstat. Removing trailing whitespace 
+        # improves textstat's results
+        reco = '. '.join(sens).strip()
+
+        fk_score = textstat.flesch_kincaid_grade(reco)
+        word_count = len(all_words)
+        word_count_nostop = len(all_words_nostop)
+        sen_count = len(sens)
+
+        words_per_sentence_nostop = word_count_nostop / sen_count
+
+        syllable_count_nostop = textstat.syllable_count(' '.join(all_words_nostop))
+
+        syllables_per_word_nostop = syllable_count_nostop / word_count
+
+        frac_stop = (word_count - word_count_nostop) / word_count
+
+        word_lens = [len(w) for w in all_words]
+        mean_word_length = np.mean(word_lens)
+        word_lens_nostop = [len(w) for w in all_words_nostop]
+        mean_word_length_nostop = np.mean(word_lens_nostop)
+
+        # measures of dispersion in word lengths
+        # ddof = 1.5 is a better correction, see
+        # https://en.wikipedia.org/wiki/Unbiased_estimation_of_standard_deviation#Rule_of_thumb_for_the_normal_distribution
+        word_length_spread = np.std(word_lens, ddof=1.5)
+        word_length_spread_nostop = np.std(word_lens_nostop, ddof=1.5)
+
+        # skew in the distribution of word lengths
+        word_length_skew_nostop = skew(word_lens_nostop, bias=False)
+
+        sent_lens = [len(s.split()) for s in sens]
+        sent_length_spread = np.std(sent_lens, ddof=1.5)
+
+        return pd.Series([frac_stop, words_per_sentence_nostop, 
+                              syllables_per_word_nostop,
+                              mean_word_length, mean_word_length_nostop,
+                              word_length_spread, word_length_spread_nostop,
+                              word_length_skew_nostop, sent_length_spread, 
+                              fk_score, unique_word_frac],
+                          index=['frac_stop', 'words_per_sentence_nostop', 
+                                    'syllables_per_word_nostop', 'mean_word_length',
+                                    'mean_word_length_nostop', 'word_length_spread', 
+                                    'word_length_spread_nostop', 'word_length_skew_nostop',
+                                    'sent_length_spread', 'fk_score', 'unique_words'])
 
 
 class BOWFeatures(BaseEstimator, TransformerMixin):
