@@ -16,3 +16,5 @@ dependencies:
         - statsmodels
         - textstat
         - -e .
+        - networkx
+        - ngram_graphs
