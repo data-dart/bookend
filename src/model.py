@@ -141,7 +141,6 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             vocab_dict[bow[i]] = i
         
         self.bow = vocab_dict
-        return vocab_dict
         
         
 class NGramFeatures(BaseEstimator, TransformerMixin):
