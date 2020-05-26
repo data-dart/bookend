@@ -284,12 +284,12 @@ class SyntacticFeatures(BaseEstimator, TransformerMixin):
 class NGramFeatures(BaseEstimator, TransformerMixin):
     """Converts text into n-gram features"""
 
-    def __init__(self, ngram_instr):
+    def __init__(self, ngrams=[(1,True,True),(2,True,True),(3,True,True)]):
         """ngram_instr is a list of tuples with instructions on how to create the ngram graphs and features
            format: [(n_1, wordgram_1, pos_1),(n_2, wordgram_2, pos_2),...]
-           example: If you wanted uni-word-grams using POS tagged text you would pass ngram_instr=[(1, True, True)]
+           example: If you wanted uni-word-grams using POS tagged text you would pass ngrams=[(1, True, True)]
         """
-        self.ngrams = ngram_instr
+        self.ngrams = ngrams
 
     def transform(self, X):
         # does whatever is needed to build features
@@ -310,10 +310,9 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
 
         transformed_X = text_frame.copy(deep=True)
         # Removing the columns that were created in order to generate the features
-        transformed_X.drop(columns=['author','text','book'])
         for column in transformed_X.columns:
-            if ('graph' in column):
-                transformed_X.drop(columns=column)
+            if (('graph' in column) or ('author' in column) or ('text' in column) or ('book' in column)):
+                transformed_X.drop(columns=column, inplace=True)
         return transformed_X
 
     def fit(self, X, y=None, random_seed=None, tdsplit=0.5):
