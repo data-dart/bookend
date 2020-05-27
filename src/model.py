@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from book import BookText
+from .book import BookText
 import textstat
 from scipy.stats import skew
 
@@ -15,6 +15,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 from nltk.util import ngrams
 import collections
 import networkx as nx
+import ngram_graphs
+import copy
 
 def _convert_to_dataframe(text):
     """Converts text to a DataFrame as a preprocessing step
@@ -282,12 +284,12 @@ class SyntacticFeatures(BaseEstimator, TransformerMixin):
 class NGramFeatures(BaseEstimator, TransformerMixin):
     """Converts text into n-gram features"""
 
-    def __init__(self, ngram_instr):
+    def __init__(self, ngrams=[(1,True,True),(2,True,True),(3,True,True)]):
         """ngram_instr is a list of tuples with instructions on how to create the ngram graphs and features
            format: [(n_1, wordgram_1, pos_1),(n_2, wordgram_2, pos_2),...]
-           example: If you wanted uni-word-grams using POS tagged text you would pass ngram_instr=[(1, True, True)]
+           example: If you wanted uni-word-grams using POS tagged text you would pass ngrams=[(1, True, True)]
         """
-        self.ngrams = ngram_instr
+        self.ngrams = ngrams
 
     def transform(self, X):
         # does whatever is needed to build features
@@ -308,16 +310,16 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
 
         transformed_X = text_frame.copy(deep=True)
         # Removing the columns that were created in order to generate the features
-        transformed_X.drop(columns=['author','text','book'])
         for column in transformed_X.columns:
-            if ('graph' in column):
-                transformed_X.drop(columns=column)
+            if (('graph' in column) or ('author' in column) or ('text' in column) or ('book' in column)):
+                transformed_X.drop(columns=column, inplace=True)
         return transformed_X
 
     def fit(self, X, y=None, random_seed=None, tdsplit=0.5):
         # builds the n-gram graph or graphs
         text_frame = _convert_to_dataframe(X)
-        self.topic_graphs = np.empty(len(self.ngrams))
+        # Creating an empty array to store the dictionaries of topic graphs later
+        self.topic_graphs = np.empty(len(self.ngrams),dtype='object')
         for i,instr in enumerate(self.ngrams):
             topic_graphs_temp = {}
             self.make_graphs(text_frame, n=instr[0], wordgram=instr[1], pos=instr[2])
@@ -328,7 +330,7 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
                         pos_string = 'pos_'
                     else:
                         pos_string = ''
-                    self.topic_graphs[author] = self.make_topic_graph(list(text_frame[y == author]['graphs_'+pos_string+str(instr[0])]))
+                    topic_graphs_temp[author] = self.make_topic_graph(list(text_frame[y == author]['graphs_'+pos_string+str(instr[0])]))
             else:
                 for author in np.unique(text_frame.author):
                     # If pos=True need extra string to identify graph
@@ -336,7 +338,7 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
                         pos_string = 'pos_'
                     else:
                         pos_string = ''
-                    self.topic_graphs[author] = self.make_topic_graph(list(text_frame[text_frame.author == author]['graphs_'+pos_string+str(instr[0])]))
+                    topic_graphs_temp[author] = self.make_topic_graph(list(text_frame[text_frame.author == author]['graphs_'+pos_string+str(instr[0])]))
             self.topic_graphs[i] = topic_graphs_temp
 
         return self
@@ -353,46 +355,48 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
             dataframe['graphs_'+str(n)] = dataframe.apply(lambda row:row.book.make_graph(n, wordgram=wordgram), axis=1)
 
     def make_topic_graph(self, topics):
-    """Returns a topic graph or topic graphs dependent on the type of the argument topics
+        """Returns a topic graph or topic graphs dependent on the type of the argument topics
 
-    topics (list or dict): If list, will create a topic graph from every graph in the list
-                           If dict, will create a topic graph for each key. A key value pair is
-                           expected to be the (key) topic name and (value) list of graphs from
-                           which to create the topic graph. Will return a dictionary with the same
-                           keys but who's values correspond to the topic graph
-    """
+        topics (list or dict): If list, will create a topic graph from every graph in the list
+                               If dict, will create a topic graph for each key. A key value pair is
+                               expected to be the (key) topic name and (value) list of graphs from
+                               which to create the topic graph. Will return a dictionary with the same
+                               keys but who's values correspond to the topic graph
+        """
 
-    if (isinstance(topics,list)):
-        # Creating empty object that will become the topic graph
-        g_topic = None
-        for i, graph in enumerate(topics):
-            if g_topic is None:
-                g_topic = graph
-            else:
-                gu = nx.compose(g_topic, graph)
-                for edge in graph.edges:
-                    if (edge not in g_topic.edges):
-                        gu.edges[edge[0],edge[1]]['weight'] = graph.edges[edge[0],edge[1]]['weight']
-                    elif (edge not in graph.edges):
-                        gu.edges[edge[0],edge[1]]['weight'] = g_topic.edges[edge[0],edge[1]]['weight']
-                    else:
-                        weight_g_topic = g_topic.get_edge_data(edge[0],edge[1])['weight']
-                        weight_gdi = graph.get_edge_data(edge[0],edge[1])['weight']
-                        gu.edges[edge[0],edge[1]]['weight'] = weight_g_topic + (weight_gdi - weight_g_topic)/i
-                g_topic = copy.deepcopy(gu)
-        return g_topic
+        if (isinstance(topics,list)):
+            # Creating empty object that will become the topic graph
+            g_topic = None
+            for i, graph in enumerate(topics):
+                if g_topic is None:
+                    g_topic = graph
+                else:
+                    gu = nx.compose(g_topic, graph)
+                    for edge in graph.edges:
+                        if (edge not in g_topic.edges):
+                            gu.edges[edge[0],edge[1]]['weight'] = graph.edges[edge[0],edge[1]]['weight']
+                        elif (edge not in graph.edges):
+                            gu.edges[edge[0],edge[1]]['weight'] = g_topic.edges[edge[0],edge[1]]['weight']
+                        else:
+                            weight_g_topic = g_topic.get_edge_data(edge[0],edge[1])['weight']
+                            weight_gdi = graph.get_edge_data(edge[0],edge[1])['weight']
+                            gu.edges[edge[0],edge[1]]['weight'] = weight_g_topic + (weight_gdi - weight_g_topic)/i
+                    g_topic = copy.deepcopy(gu)
+            return g_topic
 
-    elif (isinstance(topics,dict)):
-        topic_dict = dict.fromkeys(topics.keys(),[])
-        for key in topic_dict:
-            graphs = topics[key]
-            topic_dict[key] = make_topic_graph(graphs)
-        return topic_dict
+        elif (isinstance(topics,dict)):
+            topic_dict = dict.fromkeys(topics.keys(),[])
+            for key in topic_dict:
+                graphs = topics[key]
+                topic_dict[key] = make_topic_graph(graphs)
+            return topic_dict
 
-    else:
-        raise ValueError("'topics' must be either a list or dict object")
+        else:
+            raise ValueError("'topics' must be either a list or dict object")
 
-    def get_graph_metrics(dataframe, topic_graphs, graph_key, col_mod):
+    def get_graph_metrics(self, dataframe, topic_graphs, graph_key, col_mod):
+        """Takes in a dataframe and adds to it columns for each similarity metric
+        """
         for i in dataframe.index:
             graph = dataframe.loc[i,graph_key]
             for j, key_j in enumerate(topic_graphs.keys()):
@@ -400,9 +404,9 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
                 cs = ngram_graphs.containment_similarity(author_graph, graph)
                 vs = ngram_graphs.value_similarity(author_graph, graph)
                 nvs = ngram_graphs.normalized_value_similarity(author_graph, graph)
-                dataframe.loc[i,'cs_'+col_mod+key_j] = cs
-                dataframe.loc[i,'vs_'+col_mod+key_j] = vs
-                dataframe.loc[i,'nvs_'+col_mod+key_j] = nvs
+                dataframe.loc[i,'cs_'+col_mod+str(key_j)] = cs
+                dataframe.loc[i,'vs_'+col_mod+str(key_j)] = vs
+                dataframe.loc[i,'nvs_'+col_mod+str(key_j)] = nvs
 
 
 
