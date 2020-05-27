@@ -196,7 +196,7 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             
         else:
             if self.bow =={}:
-                raise ValueError
+                raise ValueError('Must pass a bag of words if use_passed_bow is True')
                 
         return self
 
