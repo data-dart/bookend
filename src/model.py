@@ -196,8 +196,7 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             
         else:
             if self.bow =={}:
-                print("Looks like you forgot to pass a Bag of words.")
-                print("If you want to build a bag instead, set use_passed_bag=False .")
+                raise ValueError
                 
         return self
 
@@ -288,8 +287,9 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
             """ A local helper function """
             bt = BookText(rawtext=text)
             bt.clean(lemmatize=True, deromanize=True,inplace=True)
-            sentences = bt.tokenize(on = 'sent') #all sentences in one row
+            sentences = bt.tokenize(on = 'sent') #list of all sentences in one row
             tagged_sentences = [pos_tag(sentence.split()) for sentence in sentences]  # tagged sentences
+            
             p_list = [] # contains all the proper nouns in the entire row 
             for tagged_sent in tagged_sentences:
                 propernouns = [word for word,pos in tagged_sent if pos == 'NNP']
