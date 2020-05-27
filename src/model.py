@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from book import BookText
+from .book import BookText
 import textstat
 from scipy.stats import skew
 
