@@ -43,7 +43,7 @@ These features are a grab-bag of word and sentence level statistics, like the me
 
 #### Syntactic Features
 
-These features focus on the frequency of different parts of speech used by the authors.
+These features focus on the frequency of different [parts of speech](https://en.wikipedia.org/wiki/Part_of_speech) used by the authors. We classify the words in a text sample into 7 distinct parts of speech categories and then build feature vectors from them. For example, for each text sample, we look at the frequency of nouns, a "noun-verb" bigram, and a "noun-verb-noun" trigram.
 
 #### N-Grams
 
