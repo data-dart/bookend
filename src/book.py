@@ -363,16 +363,6 @@ class BookText():
         graph = generator.generate_text_graphs([self.text], weight=1.0, wordgram=wordgram)
         return graph[0]
 
-    def make_graph(self, n, wordgram=False):
-        """Returns a graph representation of the n-grams in the BookText object
-        
-        n: Length of n-gram used to construct the graph
-        wordgram (default False): If true will create a word-gram graph instead of the default char-gram
-        """
-        generator = ngram_graphs.Generator(n=n, kind='networkx')
-        graph = generator.generate_text_graphs([self.text], weight=1.0, wordgram=wordgram)
-        return graph[0]
-
     def word_count(self, unique=False, **kwargs):
         """Returns a count of the words in the BookText object
         If unique, returns only the number of unique words
