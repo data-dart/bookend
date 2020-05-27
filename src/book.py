@@ -7,7 +7,6 @@ import numpy as np
 from warnings import warn
 import ngram_graphs
 
-
 class BookText():
     """A class for reading and manipulating texts"""
 
@@ -353,7 +352,7 @@ class BookText():
             self.text = book.text
         else:
             return book
-
+        
     def make_graph(self, n, wordgram=False):
         """Returns a graph representation of the n-grams in the BookText object
         
