@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from book import BookText
+from .book import BookText
 import textstat
 from scipy.stats import skew
 
@@ -355,6 +355,7 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
 
     def make_topic_graph(self, topics):
         """Returns a topic graph or topic graphs dependent on the type of the argument topics
+
         topics (list or dict): If list, will create a topic graph from every graph in the list
                                If dict, will create a topic graph for each key. A key value pair is
                                expected to be the (key) topic name and (value) list of graphs from
@@ -405,7 +406,6 @@ class NGramFeatures(BaseEstimator, TransformerMixin):
                 dataframe.loc[i,'cs_'+col_mod+str(key_j)] = cs
                 dataframe.loc[i,'vs_'+col_mod+str(key_j)] = vs
                 dataframe.loc[i,'nvs_'+col_mod+str(key_j)] = nvs
-
 
 # an example usage incorporating these into a pipe
 # lexical_pipe = Pipeline([('features', Pipeline([
