@@ -12,7 +12,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import VotingClassifier
 from sklearn.feature_extraction.text import CountVectorizer
+
 from nltk.util import ngrams
+from nltk.tag import pos_tag
+from nltk import FreqDist
+
 import collections
 import networkx as nx
 import ngram_graphs
@@ -135,38 +139,73 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self, bow={}):
+    def __init__(self, bow={}, use_passed_bow=False, include_proper_nouns=False, max_occurences=10000, min_occurences=0):
         """
-        :vocabulary: is a bag of words as a dictionary if it is available.
+        constructor for class BOWFeatures
+        
+        Parameters:
+        
+        bow: dict : of the form {word: unique int index}
+        
+        use_passed_bow: boolean : to use passed bow or not
+        
+        include_proper_nouns : boolean :  use dict with or without proper nouns. For a passed bow, this will be ignored.
+        
+        max_occurences: int : a word which appers more than this number of times in the corpus will be 
+                                removed from the dictionary
+                                
+        min_occurences : int : a word which appers fewer than this number of times in the corpus 
+                                will be removed from the dictionary
         
         """
         self.bow = bow
+        self.use_passed_bow = use_passed_bow
+        self.include_proper_nouns = include_proper_nouns
+        self.max_occurences = max_occurences
+        self.min_occurences = min_occurences
         
 
     def transform(self, X):
         """vectorizes a row of text data using the bag of words"""
-
         vectorizer = CountVectorizer(analyzer='word',token_pattern=r'\w{1,}',
                                 ngram_range=(1, 1), vocabulary=self.bow)
+        text_frame = _convert_to_dataframe(X)
         
+         #-----------lemmatize before vectorizing--------------------------------------------   
+        text_frame['text'] = text_frame['text'].apply(lambda text: BookText(rawtext=text)
+                                                      .clean(lemmatize=True, deromanize=True)
+                                                      .text)
+        #------------------------------------------------------------------------------------
+        
+        X = text_frame['text'].values
         XX = vectorizer.fit_transform(X)
         
         return XX
         
 
     def fit(self, X, y=None):
-        """Fit DataFrame by building bag of words"""
+        """Fit DataFrame by building bag of words
+        
+        Uses the passed bow if the flag self.use_passed_bow is True
+        
+        """
         text_frame = _convert_to_dataframe(X)
-        if self.bow =={}:
-            self.build_bow(corpus = text_frame['text'].values)
+        
+        if not self.use_passed_bow:
+            self.build_bow(corpus = text_frame['text'])
+            
+        else:
+            if self.bow =={}:
+                raise ValueError('Must pass a bag of words if use_passed_bow is True')
+                
         return self
 
-    def build_bow(self, corpus):
+    def build_bow(self, corpus: pd.Series):
         """
         Returns a dict of unique words in the corpus
 
         Input:
-        A corpus in the form of a np. array
+        A corpus in the form of a pd.Series
 
         Output: 
         Corpus vocabulary as a dictionary.
@@ -175,30 +214,131 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
         dict_value : an integer label for the key
 
         """
-        #---------------STEP-1: clean, tokenize, lower-------------------------------------------
+        #----------------------------clean, tokenize, lower--------------------------------------
+        
+        corpus_vals = corpus.values
+        
         words = []
-        for i in range(len(corpus)):
-            b = BookText(rawtext = corpus[i])
+        for i in range(len(corpus_vals)):
+            b = BookText(rawtext = corpus_vals[i])
             bb = b.clean(deromanize=True, lemmatize=True) 
             words += bb.tokenize(on='words', rem_stopwords=True)
+        
         words = [w.lower() for w in words]
+        
+       
+        
+        
+        #---------------------------remove too frequent and too infrequent words-----------------
+        
+        dist = FreqDist(words)
+        repeats = {}
+        for rep_count in sorted(list(set(dist.values())), reverse = True):
+            if (rep_count >=self.min_occurences) & (rep_count <=self.max_occurences):
+                repeats[rep_count] = [word for word in dist.keys() if dist[word] == rep_count]
+                
+        words_minus_tails = []
+        for v in repeats.values():
+            words_minus_tails += v 
+        words = words_minus_tails
+        
+       
+        
 
-        words = list(set(words)) #Making a set early on reduces the size to speed things up
-
-
-        #---------------STEP-2: remove all numeric characters ------------------------------------
+        #----------------------------remove all numeric characters ------------------------------
         no_nums = []
         for word in words:
             if (not any(ch.isdigit() for ch in word)):
                 no_nums.append(word)
-
-        #---------------STEP-3: Package as a dictionary ------------------------------------------
-        bow = no_nums
+                
+        all_words = no_nums
+        
+        
+        
+        
+        #--------------------------- identify and remove all proper nouns ------------------------
+        
+        if self.include_proper_nouns:
+            proper_nouns = []
+        
+        else:
+            proper_nouns= self.proper_nouns_in_corpus(corpus) 
+            proper_nouns = [word.lower() for word in proper_nouns]
+        
+        words_minus_proper = [word for word in all_words if word not in proper_nouns]
+        
+        #------------------------Package as a dictionary ------------------------------------------
         vocab_dict = {}
-        for i in range(len(bow)):
-            vocab_dict[bow[i]] = i
+        for i in range(len(words_minus_proper)):
+            vocab_dict[words_minus_proper[i]] = i
         
         self.bow = vocab_dict
+        
+        #------------------------------fin.------------------------------------------------------
+
+        
+        
+        
+    def proper_nouns_in_corpus(self, corpus: pd.Series):
+        
+        """ collects all proper nouns in the corpus and returns them as a list"""
+
+        def find_proper_nouns(text):
+            """ A local helper function """
+            bt = BookText(rawtext=text)
+            bt.clean(lemmatize=True, deromanize=True,inplace=True)
+            sentences = bt.tokenize(on = 'sent') #list of all sentences in one row
+            tagged_sentences = [pos_tag(sentence.split()) for sentence in sentences]  # tagged sentences
+            
+            p_list = [] # contains all the proper nouns in the entire row 
+            for tagged_sent in tagged_sentences:
+                propernouns = [word for word,pos in tagged_sent if pos == 'NNP']
+                p_list += propernouns # adding all propernouns in a particular sentence
+            return p_list
+        
+        series_temp = corpus.apply(find_proper_nouns) # apply returns a series
+        
+        proper_list = [] # contains all the proper nouns in the corpus
+        for w in series_temp:
+            proper_list += w 
+            
+        #----------------------------- filtering out some proper nouns------------------------------
+        
+
+        titles = ['Mr', 'Madam', 'Mrs', 'Miss', 'Sir','St', 'Lady', 
+                  'Professor', 'Captain', 'King', 'Queen', 'God', 'Lord', 'Colonel', 'Master', 'Knight', 'Mayor']
+        Days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        Months = ["January", "February", "March", "April", "May", 
+                  "June", "July", "August", "September", "October", "November", "December"]
+        Misc = ['English', 'Illustrated', 'Illustration', 'Jew', 
+                'Look', 'Old', 'Thank', 'Great', 'Man', 'House', 'Death', 'Cakes', 'Square', 'Poor', 'Nay']
+
+        proper_list_cleaned = [word.title() for word in proper_list]
+        proper_list_cleaned = [word for word in proper_list_cleaned if word not in titles]
+        proper_list_cleaned = [word for word in proper_list_cleaned if word not in Days]
+        proper_list_cleaned = [word for word in proper_list_cleaned if word not in Months]
+        proper_list_cleaned = [word for word in proper_list_cleaned if word not in Misc]
+        proper_list_cleaned = [word for word in proper_list_cleaned if len(word) > 2]
+        
+        #---------------------------------- converting to a set------------------------------------
+        
+        N_repeats = 0 
+        # optional parameter which decides how many times a proper noun needs 
+        # to occur in the corpus for it to be included in the list of proper nouns.
+
+        dist = FreqDist(proper_list_cleaned)
+        
+        repeats = {}
+        for rep_count in sorted(list(set(dist.values())), reverse = True):
+            if rep_count >=N_repeats:
+                repeats[rep_count] = [word for word in dist.keys() if dist[word] == rep_count]
+                
+        proper_nouns = []
+        for v in repeats.values():
+            proper_nouns += v
+        
+        return proper_nouns
+            
                 
 class SyntacticFeatures(BaseEstimator, TransformerMixin):
     
