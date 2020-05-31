@@ -25,11 +25,8 @@ We build many features out of the text, and use an ensemble machine learning mod
 
 In the future we will expand to allow any-size snippets of text and additional authors, but for now we have focused on identifying 75-sentence chunks of text. We include the following authors, chosen as the top authors on Project Gutenberg who wrote their works in English (We exclude Shakespeare, as his works are largely plays rather than novels or short stories, and we exclude Poe, as his top works are largely collections that overlap with each other in content. We additionally add JK Rowling, who famously wrote the Harry Potter series as well as crime fiction novels under the pseudonym Robert Galbraith):
 
-| Author                | Jane Austen | Lewis Caroll | Daniel Defoe | Charles Dickens | Sir Arthur Conan Doyle | Jack London | J.K. Rowling | Mary Shelley | Robert Louis Stevenson | H.G. Wells | Oscar Wilde |
-|-----------------------|-------------|--------------|--------------|-----------------|------------------------|-------------|--------------|--------------|------------------------|------------|-------------|
-| Works in Training Set |             |              |              |                 |                        |             |              |              |                        |            |             |
-| Work(s) Testing Set   |             |              |              |                 |                        |             |              |              |                        |            |             |
-|                       |             |              |              |                 |                        |             |              |              |                        |            |             |
+| Jane Austen | Lewis Caroll | Daniel Defoe | Charles Dickens | Sir Arthur Conan Doyle | Jack London | J.K. Rowling | Mary Shelley | Robert Louis Stevenson | H.G. Wells | Oscar Wilde |
+|-------------|--------------|--------------|-----------------|------------------------|-------------|--------------|--------------|------------------------|------------|-------------|
 
 Below we briefly summarize several avenues we investigated for engineering features from the text. For more detail, we refer you to the [notebooks](https://github.com/data-dart/bookend/tree/master/notebooks) and [source code](https://github.com/data-dart/bookend/tree/master/src).
 
@@ -51,7 +48,13 @@ These features look at the relationship between sets of words and/or characters 
 
 ## Results
 
-TBD. High accuracy. Different feature sets have different success.
+After cross-validation on both individual model parameters and combinations of feature sets, we found our best model was a soft-voting classifier comprised of an SVM classifier on the N-Grams, an SVM classifier on the syntactic features, and a logistic regression classifier on the bag-of-words features.
+
+We tested the model on snippets from previously unseen books. The results, in the form of a confusion matrix (true value on vertical, predicted on horizontal), are shown here. For the time being, we have excluded Lewis Carroll, as his mathematical texts include large swaths of formatted figures and equations that our model does not yet account for.
+
+![confusion_matrix](figures/confusion_matrix_no_carroll.png)
+
+All-told, the model has a classification accuracy of >90%. The bag-of-words model is by far the most accurate of any individual feature model, with >80% accuracy alone.
 
 ## Applications
 
@@ -86,7 +89,7 @@ $ python
 >>> import nltk
 >>> nltk.download()
 ```
-which will open a GUI that allows you to downlaod the relevant files.
+which will open a GUI that allows you to download the relevant files.
 
 For more information, or for issues relating to `nltk`, please visit https://github.com/nltk/nltk.
 
