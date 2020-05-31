@@ -26,7 +26,7 @@ We build many features out of the text, and use an ensemble machine learning mod
 In the future we will expand to allow any-size snippets of text and additional authors, but for now we have focused on identifying 75-sentence chunks of text. We include the following authors, chosen as the top authors on Project Gutenberg who wrote their works in English (We exclude Shakespeare, as his works are largely plays rather than novels or short stories, and we exclude Poe, as his top works are largely collections that overlap with each other in content. We additionally add JK Rowling, who famously wrote the Harry Potter series as well as crime fiction novels under the pseudonym Robert Galbraith):
 
 | Jane Austen | Lewis Caroll | Daniel Defoe | Charles Dickens | Sir Arthur Conan Doyle | Jack London | J.K. Rowling | Mary Shelley | Robert Louis Stevenson | Mark Twain | H.G. Wells | Oscar Wilde |
-|-------------|--------------|--------------|-----------------|------------------------|-------------|--------------|--------------|------------------------|------------|-------------|
+|-------------|--------------|--------------|-----------------|------------------------|-------------|--------------|--------------|------------------------|------------|-------------|-------------|
 
 Below we briefly summarize several avenues we investigated for engineering features from the text. For more detail, we refer you to the [notebooks](https://github.com/data-dart/bookend/tree/master/notebooks) and [source code](https://github.com/data-dart/bookend/tree/master/src).
 
