@@ -1,5 +1,5 @@
 # bookend
-
+![video_ss](figures/video_screenshot.png)
 [![video_ss](figures/video_screenshot.png)](https://www.youtube.com/watch?v=P1Sq7T9PvP0)
 
 bookend is a classifier for text data. We are building a machine learning model to identify the author of a work given only a selection of text. As the project progresses, we will provide further information.
