@@ -1,6 +1,8 @@
 # bookend
 
-bookend is a classifier for text data. We are building a machine learning model to identify the author of a work given only a selection of text. As the project progresses, we will provide further information.
+bookend is a classifier for text data. We have built a machine learning model to identify the author of a work given only a selection of text. We are continually adding to the model and improving it, so make sure to check back for updates!
+
+If you would like to try out our classifier for yourself, visit [our live app](http://bookend-data-dart.herokuapp.com/). Enter your own text, and see if we can get it right!
 
 This project is part of The Erdos Institute's  [data science boot camp](https://www.erdosinstitute.org/code). Data sources include [Project Gutenberg](https://www.gutenberg.org/).
 
