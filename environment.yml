@@ -18,3 +18,4 @@ dependencies:
         - -e .
         - networkx
         - ngram_graphs
+        - mlxtend
