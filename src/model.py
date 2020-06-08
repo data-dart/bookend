@@ -140,7 +140,7 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
     """
 
     def __init__(self, bow={}, use_passed_bow=False, include_proper_nouns=False, 
-		    	 max_occurences=10000, min_occurences=0, rate=False):
+		    	 max_occurences=10000, min_occurences=0, rate=True):
         """
         constructor for class BOWFeatures
         
