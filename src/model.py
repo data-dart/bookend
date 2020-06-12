@@ -139,7 +139,8 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self, bow={}, use_passed_bow=False, include_proper_nouns=False, max_occurences=10000, min_occurences=0):
+    def __init__(self, bow={}, use_passed_bow=False, include_proper_nouns=False, 
+		    	 max_occurences=10000, min_occurences=0, rate=True):
         """
         constructor for class BOWFeatures
         
@@ -157,12 +158,15 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
         min_occurences : int : a word which appers fewer than this number of times in the corpus 
                                 will be removed from the dictionary
         
+        rate : bool : if True, the transform returns the rate of the word instead of absolute count
+						        i.e., it will divide the count by the number of words in the text sample
         """
         self.bow = bow
         self.use_passed_bow = use_passed_bow
         self.include_proper_nouns = include_proper_nouns
         self.max_occurences = max_occurences
         self.min_occurences = min_occurences
+        self.rate = rate
         
 
     def transform(self, X):
@@ -173,12 +177,17 @@ class BOWFeatures(BaseEstimator, TransformerMixin):
         
          #-----------lemmatize before vectorizing--------------------------------------------   
         text_frame['text'] = text_frame['text'].apply(lambda text: BookText(rawtext=text)
-                                                      .clean(lemmatize=True, deromanize=True)
-                                                      .text)
+                                                      .clean(lemmatize=True, deromanize=True))
         #------------------------------------------------------------------------------------
         
-        X = text_frame['text'].values
+        X = text_frame['text'].apply(lambda t: t.text).values
         XX = vectorizer.fit_transform(X)
+
+        if self.rate:
+        	# have to reshape the word counts to get the multiplication to work
+        	wcs = text_frame['text'].apply(lambda t: t.word_count(rem_stopwords=True)).values
+        	wcs[wcs == 0] = 1 # prevent divide by 0 errors; in this case, the whole row should be 0 anyway
+        	XX = XX.multiply(1. / wcs[:, None])
         
         return XX
         
